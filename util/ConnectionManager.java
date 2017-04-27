@@ -1,25 +1,15 @@
+package util;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
 /**
- * Created by Nathan on 4/17/17.
+ * Created by Nathan on 4/26/17.
  */
-public class Main {
-    public static void main(String[] args) {
-        Connection connection = null;
+public class ConnectionManager {
 
-        try {
-            connection = getConnection();
-            System.out.println("Connected to database successfully");
-        } catch (SQLException e) {
-            System.out.println("Error connecting to database: " + e.getMessage());
-        } finally {
-            closeConnection(connection);
-        }
-    }
-
-    private static Connection getConnection() throws SQLException {
+    public static Connection getConnection() throws SQLException {
         // Get HawkID and password from system environment variables - these will need to be set on whoever's machine this application is running on
         final String HW7B_DB_USER = System.getenv("HW7B_DB_USER");
         final String HW7B_DB_PASS = System.getenv("HW7B_DB_PASS");
@@ -29,11 +19,8 @@ public class Main {
         final String MYSQL_SERVER_ROUTE = "jdbc:mysql://dbdev.divms.uiowa.edu:3306/db_" + HW7B_DB_USER;
 
         System.out.println("Attempting to connect to database...");
-//        System.out.println("\tRoute: " + MYSQL_SERVER_ROUTE);
-//        System.out.println("\tUser:  " + HW7B_DB_USER);
-//        System.out.println("\tPass:  " + HW7B_DB_PASS);
-
         Connection connection = DriverManager.getConnection(MYSQL_SERVER_ROUTE, HW7B_DB_USER, HW7B_DB_PASS);
+        System.out.println("Connected to database successfully");
 
         connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
         connection.setAutoCommit(false);
@@ -41,7 +28,7 @@ public class Main {
         return connection;
     }
 
-    private static void closeConnection(Connection connection) {
+    public static void closeConnection(Connection connection) {
         if (connection != null) {
             try {
                 connection.close();

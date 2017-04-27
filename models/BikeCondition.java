@@ -3,5 +3,5 @@ package models;
 /**
  * Created by Nathan on 4/17/17.
  */
-public class Condition {
+public class BikeCondition {
 }
