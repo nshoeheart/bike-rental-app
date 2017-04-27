@@ -61,8 +61,8 @@ CREATE TABLE Rental (
     customer_id INT NOT NULL,
     checkout_date DATE NOT NULL,
     due_date DATE NOT NULL,
-    returned_at DATE,
-    checked_out CHAR(1) NOT NULL,
+    return_date DATE,
+    checked_out BOOLEAN NOT NULL,
 
     PRIMARY KEY (id),
     FOREIGN KEY (bike_id) REFERENCES Bicycle(id) ON DELETE CASCADE,
