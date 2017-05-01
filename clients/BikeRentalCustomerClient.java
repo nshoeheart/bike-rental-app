@@ -17,7 +17,7 @@ import com.mysql.jdbc.Statement;
 public class BikeRentalCustomerClient {
 
     private String name;
-    private int id;
+    private int id; //added according to the pdf
 
     public BikeRentalCustomerClient() {
     	
