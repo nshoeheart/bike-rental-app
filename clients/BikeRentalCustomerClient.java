@@ -24,7 +24,7 @@ public class BikeRentalCustomerClient {
     private static final int GET_AVAIL_BIKES = 1; // Scenario covers query b and transaction c
     private static final int VIEW_CUST_RENTALS = 2; // Scenario covers query a and d
     private static final int CANCEL_RESERVATION = 3; // Scenario covers transaction d
-    private static final int MAKE_RETURN = 4; // Scenario covers query c
+    private static final int MAKE_RETURN = 4; // Scenario covers transaction b
     
     private Date currentdate = (Date) Date.from((LocalDate.now()).atStartOfDay(ZoneId.systemDefault()).toInstant());
     
@@ -47,7 +47,7 @@ public class BikeRentalCustomerClient {
 
                 //Menu for commands, customer must enter 0 to exit app
                 System.out.print("Please enter the number of the command you wish to do:\n  0. Logout\n  1. Rent Bike\n  "
-                        + "2. View Your Rentals\n  3. Request a Service\n");
+                        + "2. View Your Rentals\n  3. Cancel a Reservation\n 4. Make a Return\n ");
 
                 //Check user input
                 command = Integer.parseInt(scanner.nextLine());
@@ -57,7 +57,7 @@ public class BikeRentalCustomerClient {
                  * Exit case
                  */
                 
-                if (command == 0) {
+                if (command == EXIT) {
                     // Logs out and ends application
                     System.out.println("Logging out...");
                     
@@ -86,6 +86,7 @@ public class BikeRentalCustomerClient {
                     }
 
                     rent = Integer.parseInt(scanner.nextLine());
+                    if(rent == 0) break;
                     
                     // Gets more info regarding the rental
                     System.out.println("Enter the date you wish to rent the bike (format like MMM DD YYYY, including the spaces where MMM = Jan, Feb, etc.)");
@@ -160,13 +161,13 @@ public class BikeRentalCustomerClient {
                 }else if (command == CANCEL_RESERVATION){
                 	
                 	// Retrieves customer rentals beyond current date
-                    PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Rental r WHERE r.customer_id = ? AND r.checkout_date >= ?");
+                    PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Rental r WHERE r.customer_id = ? AND r.checkout_date >= ? AND r.checked_out = true");
                     preparedStatement.setInt(1, customer.id);
                     preparedStatement.setDate(2, new Date(LocalDate.now().toEpochDay()));
                     List<Rental> customerRentals = Rental.createListFromResultSet(preparedStatement.executeQuery());
                     
                     
-                    System.out.println("Which of these rentals would you like to cancel? Please enter the id number associated with the rental");
+                    System.out.println("Which of these rentals would you like to cancel? Please enter the id number associated with the rental. ");
                     
                     // Prints out those customer's rentals
                     for(int i = 0; i < customerRentals.size(); i++){
@@ -182,15 +183,12 @@ public class BikeRentalCustomerClient {
                     cancelRental.setInt(1, cancel);
                     cancelRental.executeQuery();
                     
-                /*
-                * Make a return on a user rental
-                * Covers transaction b
-                * READY FOR TESTING
-                */    
+                	
+                    
                 }else if (command == MAKE_RETURN){
                 	
                 	// Queries up outstanding rentals for user and puts them in a list
-                	PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Rental r where r.customer_id = ? AND r.checked_out = true");
+                	PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Rental r where r.customer_id = ? AND r.checked_out = true AND r.return_date = NULL");
                 	preparedStatement.setInt(1, customer.id);
                 	List<Rental> outstandingRentals = Rental.createListFromResultSet(preparedStatement.executeQuery());
                 	
