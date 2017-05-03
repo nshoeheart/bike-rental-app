@@ -17,6 +17,7 @@ CREATE TABLE Equipment (
     brand VARCHAR(100) NOT NULL,
     name VARCHAR(100) NOT NULL,
     cost FLOAT NOT NULL,
+    stock INT NOT NULL,
 
     PRIMARY KEY (id)
 );

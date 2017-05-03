@@ -28,6 +28,17 @@ public class ConnectionManager {
         return connection;
     }
 
+    public static void rollbackConnection(Connection connection) {
+        if (connection != null) {
+            try {
+                connection.rollback();
+                System.out.println("Successfully performed rollback for this connection");
+            } catch (SQLException e) {
+                System.out.println("Failed to perform a rollback for this connection");
+            }
+        }
+    }
+
     public static void closeConnection(Connection connection) {
         if (connection != null) {
             try {
