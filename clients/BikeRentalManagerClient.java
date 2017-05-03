@@ -41,7 +41,7 @@ public class BikeRentalManagerClient {
                 if (command == 0) {
                     // Logs out and ends application
                     System.out.println("Logging out...");
-                } else if (command == 1) {
+                } else if (command ==  VIEW_CURRENT_RENTS) {
                     //link into bicycle table to add the user input bike
                     System.out.print("Adding A Bike To Inventory\n\n Answer the following questions:\n");
                     // Asks to establish bike we need to add
