@@ -14,6 +14,13 @@ import com.mysql.jdbc.Statement;
  * Created by Nathan on 4/26/17.
  */
 public class BikeRentalManagerClient {
+	
+	private static final int EXIT = 0;
+	private static final int VIEW_CURRENT_RENTS = 1; // Scenario covers query a
+	private static final int PROCESS_CHECKOUT = 2; // Scenario covers transaction a
+	private static final int PROCESS_RETURN = 3; // Scenario covers transaction b
+	private static final int VIEW_CONDITIONS = 4; // Scenario covers query e
+	private static final int EXECUTE_SERVICE = 5; // Scenario covers transaction e
 
     public BikeRentalManagerClient() {
     }
@@ -25,7 +32,7 @@ public class BikeRentalManagerClient {
         try {
             connection = ConnectionManager.getConnection();
             int command = 1;
-            while (command != 0) {
+            while (command != EXIT) {
                 //Menu for commands, manager must enter 0 to exit app
                 System.out.print("Please enter the number of the command you wish to do:\n  0. Logout\n  1. Add a Bike to Inventory\n  "
                         + "2. Add a new rental record\n  3. MORE COMMANDS\n"); // 1. will enter into bicycle table, 2 into rental table etc.
