@@ -21,6 +21,24 @@ public class OfferedService {
         this.cost = cost;
     }
 
+    public static OfferedService createNewOfferedService(Connection connection, String name, float cost) throws SQLException {
+        PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO OfferedService (name, cost) VALUES (?, ?)");
+        preparedStatement.setString(1, name);
+        preparedStatement.setFloat(2, cost);
+        int result = preparedStatement.executeUpdate();
+
+        if (result == 1) { // new OfferedService successfully inserted
+            ResultSet offeredServiceRS =  connection.createStatement().executeQuery("SELECT LAST_INSERT_ID() AS id");
+            if (offeredServiceRS.next()) {
+                return getById(connection, offeredServiceRS.getInt(1));
+            } else {
+                throw new SQLException("Unable to find new OfferedService in database");
+            }
+        } else { // OfferedService not inserted
+            throw new SQLException("Unable to create new OfferedService");
+        }
+    }
+
     public static OfferedService getById(Connection connection, int id) throws SQLException {
         PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM OfferedService os WHERE os.id = ?");
         preparedStatement.setInt(1, id);

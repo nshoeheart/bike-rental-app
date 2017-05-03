@@ -1,9 +1,6 @@
 package models;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,6 +14,17 @@ public class ServicePlan {
     private ServicePlan(int bikeConditionId, int offeredServiceId) {
         this.bikeConditionId = bikeConditionId;
         this.offeredServiceId = offeredServiceId;
+    }
+
+    public static void createNewServicePlan(Connection connection, int bikeConditionId, int offeredServiceId) throws SQLException {
+        PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO ServicePlan (bike_condition_id, offered_service_id) VALUES (?, ?)");
+        preparedStatement.setInt(1, bikeConditionId);
+        preparedStatement.setInt(2, offeredServiceId);
+        int result = preparedStatement.executeUpdate();
+
+        if (result != 1) { // ServicePlan not inserted
+            throw new SQLException("Unable to create new ServicePlan");
+        }
     }
 
     /**

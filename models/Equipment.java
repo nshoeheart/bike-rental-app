@@ -25,6 +25,26 @@ public class Equipment {
         this.stock = stock;
     }
 
+    public static Equipment createNewEquipment(Connection connection, String brand, String name, float cost, int stock) throws SQLException {
+        PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO Equipment (brand, name, cost, stock) VALUES (?, ?, ?, ?)");
+        preparedStatement.setString(1, brand);
+        preparedStatement.setString(2, name);
+        preparedStatement.setFloat(3, cost);
+        preparedStatement.setInt(4, stock);
+        int result = preparedStatement.executeUpdate();
+
+        if (result == 1) { // new Equipment successfully inserted
+            ResultSet equipmentRS =  connection.createStatement().executeQuery("SELECT LAST_INSERT_ID() AS id");
+            if (equipmentRS.next()) {
+                return getById(connection, equipmentRS.getInt(1));
+            } else {
+                throw new SQLException("Unable to find new Equipment in database");
+            }
+        } else { // Equipment not inserted
+            throw new SQLException("Unable to create new Equipment");
+        }
+    }
+
     public static Equipment getById(Connection connection, int id) throws SQLException {
         PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Equipment e WHERE e.id = ?");
         preparedStatement.setInt(1, id);

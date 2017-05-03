@@ -28,10 +28,14 @@ public class Customer {
         int result = preparedStatement.executeUpdate();
 
         if (result == 1) { // new Customer successfully inserted
-            int newCustomerId = connection.createStatement().executeQuery("SELECT LAST_INSERT_ID() AS id").getInt("id");
-            return getById(connection, newCustomerId);
+            ResultSet customerRS =  connection.createStatement().executeQuery("SELECT LAST_INSERT_ID() AS id");
+            if (customerRS.next()) {
+                return getById(connection, customerRS.getInt(1));
+            } else {
+                throw new SQLException("Unable to find new Customer in database");
+            }
         } else { // Customer not inserted
-            throw new SQLException("Unable to create new customer");
+            throw new SQLException("Unable to create new Customer");
         }
     }
 

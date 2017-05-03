@@ -73,28 +73,45 @@ public class BikeRentalApp {
             }
         }
 
+        System.out.println();
         int customerId = Integer.parseInt(customerIdInput);
+        Connection connection = null;
 
         // Process instructions with valid customer ID input
         try {
+            connection = ConnectionManager.getConnection();
+            Customer customer;
+
             if (customerId == 0) {
-                return getNewCustomer();
+                System.out.println("Starting new customer creation process...");
+                customer = getNewCustomer(connection);
+                System.out.println("New customer created successfully\n");
             } else {
-                return getExistingCustomer(customerId);
+                System.out.println("Fetching customer data...");
+                customer = Customer.getById(connection, customerId);
+                System.out.println("Customer data found successfully\n");
             }
+
+            // If no errors, commit the transaction and return the Customer model
+            connection.commit();
+            return customer;
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
-            throw new SQLException("Customer login failed");
+            // Getting or creating customer failed, rollback transaction
+            ConnectionManager.rollbackConnection(connection);
+            throw new SQLException("Customer login failed - " + e.getMessage());
+        } finally {
+            ConnectionManager.closeConnection(connection);
         }
     }
 
     /**
      * Handles creation of a new Customer
      *
+     * @param connection - connection to the database
      * @return a new Customer object to start a client for
      * @throws SQLException if there was an error creating a new Customer
      */
-    private static Customer getNewCustomer() throws SQLException {
+    private static Customer getNewCustomer(Connection connection) throws SQLException {
         String lastName = "";
         String firstName = "";
         Scanner scanner = new Scanner(System.in);
@@ -111,33 +128,8 @@ public class BikeRentalApp {
             firstName = scanner.nextLine();
         }
 
-        Connection connection = null;
-
         // Create the customer and insert into the database
-        try {
-            connection = ConnectionManager.getConnection();
-            return Customer.createNewCustomer(connection, lastName, firstName);
-        } finally {
-            ConnectionManager.closeConnection(connection);
-        }
-    }
-
-    /**
-     * Handles getting an existing customer from the database
-     *
-     * @param customerId - id of an existing customer
-     * @return an existing Customer object from the database to start a client for
-     * @throws SQLException if there was an error finding the existing customer
-     */
-    private static Customer getExistingCustomer(int customerId) throws SQLException {
-        Connection connection = null;
-
-        try {
-            connection = ConnectionManager.getConnection();
-            return Customer.getById(connection, customerId);
-        } finally {
-            ConnectionManager.closeConnection(connection);
-        }
+        return Customer.createNewCustomer(connection, lastName, firstName);
     }
 
     /**

@@ -26,6 +26,17 @@ public class Bicycle {
     }
 
     /**
+     * Gets the BikeCondition object for this Bicycle represented by bikeConditionId
+     *
+     * @param connection - client's connection to the database
+     * @return the BikeCondition object for this Bicycle
+     * @throws SQLException if there was an error getting the BikeCondition
+     */
+    public BikeCondition getBikeCondition(Connection connection) throws SQLException {
+        return BikeCondition.getById(connection, bikeConditionId);
+    }
+
+    /**
      * Inserts a new Bicycle into the database and returns a Bicycle model representing that entry
      *
      * @param connection - client's connection to the database
@@ -45,22 +56,15 @@ public class Bicycle {
         int result = preparedStatement.executeUpdate();
 
         if (result == 1) { // new Bicycle successfully inserted
-            int newBikeId = connection.createStatement().executeQuery("SELECT LAST_INSERT_ID() as id").getInt("id");
-            return getById(connection, newBikeId);
+            ResultSet bicycleRS =  connection.createStatement().executeQuery("SELECT LAST_INSERT_ID() AS id");
+            if (bicycleRS.next()) {
+                return getById(connection, bicycleRS.getInt(1));
+            } else {
+                throw new SQLException("Unable to find new Bicycle in database");
+            }
         } else { // Bicycle not inserted
-            throw new SQLException("Unable to create new bicycle");
+            throw new SQLException("Unable to create new Bicycle");
         }
-    }
-
-    /**
-     * Gets the BikeCondition object for this Bicycle represented by bikeConditionId
-     *
-     * @param connection - client's connection to the database
-     * @return the BikeCondition object for this Bicycle
-     * @throws SQLException if there was an error getting the BikeCondition
-     */
-    public BikeCondition getBikeCondition(Connection connection) throws SQLException {
-        return BikeCondition.getById(connection, bikeConditionId);
     }
 
     /**

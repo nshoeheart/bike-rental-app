@@ -1,9 +1,6 @@
 package models;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -32,6 +29,25 @@ public class PerformedService {
 
     public Bicycle getBicycle(Connection connection) throws SQLException {
         return Bicycle.getById(connection, bikeId);
+    }
+
+    public static PerformedService createNewPerformedService(Connection connection, int offeredServiceId, int bikeId, LocalDate datePerformed) throws SQLException {
+        PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO PerformedService (offered_service_id, bike_id, date_performed) VALUES (?, ?, ?)");
+        preparedStatement.setInt(1, offeredServiceId);
+        preparedStatement.setInt(2, bikeId);
+        preparedStatement.setDate(3, Date.valueOf(datePerformed));
+        int result = preparedStatement.executeUpdate();
+
+        if (result == 1) { // new PerformedService successfully inserted
+            ResultSet performedServiceRS =  connection.createStatement().executeQuery("SELECT LAST_INSERT_ID() AS id");
+            if (performedServiceRS.next()) {
+                return getById(connection, performedServiceRS.getInt(1));
+            } else {
+                throw new SQLException("Unable to find new PerformedService in database");
+            }
+        } else { // PerformedService not inserted
+            throw new SQLException("Unable to create new PerformedService");
+        }
     }
 
     public static PerformedService getById(Connection connection, int id) throws SQLException {

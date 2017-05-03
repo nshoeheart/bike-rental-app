@@ -19,6 +19,23 @@ public class BikeCondition {
         this.name = name;
     }
 
+    public static BikeCondition createNewBikeCondition(Connection connection, String name) throws SQLException {
+        PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO BikeCondition (name) VALUES (?)");
+        preparedStatement.setString(1, name);
+        int result = preparedStatement.executeUpdate();
+
+        if (result == 1) { // new BikeCondition successfully inserted
+            ResultSet bikeCondRS =  connection.createStatement().executeQuery("SELECT LAST_INSERT_ID() AS id");
+            if (bikeCondRS.next()) {
+                return getById(connection, bikeCondRS.getInt(1));
+            } else {
+                throw new SQLException("Unable to find new BikeCondition in database");
+            }
+        } else { // BikeCondition not inserted
+            throw new SQLException("Unable to create new BikeCondition");
+        }
+    }
+
     public static BikeCondition getById(Connection connection, int id) throws SQLException {
         PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM BikeCondition bc WHERE bc.id = ?");
         preparedStatement.setInt(1, id);

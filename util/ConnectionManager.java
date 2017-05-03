@@ -20,7 +20,7 @@ public class ConnectionManager {
 
         System.out.println("Attempting to connect to database...");
         Connection connection = DriverManager.getConnection(MYSQL_SERVER_ROUTE, HW7B_DB_USER, HW7B_DB_PASS);
-        System.out.println("Connected to database successfully");
+        System.out.println("Connected to database successfully\n");
 
         connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
         connection.setAutoCommit(false);
@@ -30,22 +30,26 @@ public class ConnectionManager {
 
     public static void rollbackConnection(Connection connection) {
         if (connection != null) {
+            //System.out.println("Rolling back transaction for this connection...");
+
             try {
                 connection.rollback();
-                System.out.println("Successfully performed rollback for this connection");
+                //System.out.println("Successfully performed rollback for this connection\n");
             } catch (SQLException e) {
-                System.out.println("Failed to perform a rollback for this connection");
+                //System.out.println("Failed to perform a rollback for this connection\n");
             }
         }
     }
 
     public static void closeConnection(Connection connection) {
         if (connection != null) {
+            System.out.println("Closing database connection...");
+
             try {
                 connection.close();
-                System.out.println("Database connection closed successfully");
+                System.out.println("Database connection closed successfully\n");
             } catch (SQLException e) {
-                System.out.println("Failed to close connection");
+                System.out.println("Failed to close connection\n");
             }
         }
     }

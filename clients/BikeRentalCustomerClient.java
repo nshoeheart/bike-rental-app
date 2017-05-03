@@ -22,7 +22,12 @@ public class BikeRentalCustomerClient {
 
     public BikeRentalCustomerClient(Customer customer) {
         this.customer = customer;
-        //todo "login" either by getting the customer's existing info from database or prompting for user creation
+
+        System.out.println("Logged in to bike rental store customer client");
+        System.out.println("\tCustomer ID: " + customer.id);
+        System.out.println("\t  Last Name: " + customer.lastName);
+        System.out.println("\t First Name: " + customer.firstName);
+        System.out.println();
     }
 
     public void run() {
@@ -43,7 +48,7 @@ public class BikeRentalCustomerClient {
 
                 PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Rental r WHERE r.customer_id = ? AND r.checkout_date >= ?");
                 preparedStatement.setInt(1, customer.id);
-                preparedStatement.setDate(2, new Date(LocalDate.now().toEpochDay()));
+                preparedStatement.setDate(2, Date.valueOf(LocalDate.now()));
                 List<Rental> customerRentals = Rental.createListFromResultSet(preparedStatement.executeQuery());
 
                 //Check user input

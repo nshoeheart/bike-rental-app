@@ -1,9 +1,6 @@
 package models;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -38,6 +35,28 @@ public class Rental {
 
     public Customer getCustomer(Connection connection) throws SQLException {
         return Customer.getById(connection, customerId);
+    }
+
+    public static Rental createNewRental(Connection connection, int bikeId, int customerId, LocalDate checkoutDate, LocalDate dueDate, LocalDate returnDate, boolean checkedOut) throws SQLException {
+        PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO Rental (bike_id, customer_id, checkout_date, due_date, return_date, checkout_out) VALUES (?, ?, ?, ?, ?, ?)");
+        preparedStatement.setInt(1, bikeId);
+        preparedStatement.setInt(2, customerId);
+        preparedStatement.setDate(3, Date.valueOf(checkoutDate));
+        preparedStatement.setDate(4, Date.valueOf(dueDate));
+        preparedStatement.setDate(5, (returnDate == null ? null : Date.valueOf(returnDate)));
+        preparedStatement.setBoolean(6, checkedOut);
+        int result = preparedStatement.executeUpdate();
+
+        if (result == 1) { // new Rental successfully inserted
+            ResultSet rentalRS =  connection.createStatement().executeQuery("SELECT LAST_INSERT_ID() AS id");
+            if (rentalRS.next()) {
+                return getById(connection, rentalRS.getInt(1));
+            } else {
+                throw new SQLException("Unable to find new Rental in database");
+            }
+        } else { // Rental not inserted
+            throw new SQLException("Unable to create new Rental");
+        }
     }
 
     public static Rental getById(Connection connection, int id) throws SQLException {
