@@ -47,7 +47,7 @@ public class BikeRentalApp {
             if (cmdArgs.contains("customer")) {
                 Customer customer = logCustomerIn();
                 System.out.println("Starting new customer client...");
-                new BikeRentalCustomerClient(customer.id).run();
+                new BikeRentalCustomerClient(customer).run();
             }
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
