@@ -7,8 +7,8 @@ import util.ConnectionManager;
 
 import java.sql.*;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Scanner;
 
@@ -26,11 +26,8 @@ public class BikeRentalCustomerClient {
     private static final int CANCEL_RESERVATION = 3; // Scenario covers transaction d
     private static final int MAKE_RETURN = 4; // Scenario covers transaction b
     
-    private Date currentdate = (Date) Date.from((LocalDate.now()).atStartOfDay(ZoneId.systemDefault()).toInstant());
-    
     public BikeRentalCustomerClient(Customer customer) {
         this.customer = customer;
-        //todo "login" either by getting the customer's existing info from database or prompting for user creation
     }
 
     public void run() {
@@ -145,7 +142,7 @@ public class BikeRentalCustomerClient {
                     // Retrieves customer rentals
                     PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Rental r WHERE r.customer_id = ? AND r.checkout_date >= ?");
                     preparedStatement.setInt(1, customer.id);
-                    preparedStatement.setDate(2, new Date(LocalDate.now().toEpochDay()));
+                    preparedStatement.setDate(2, Date.valueOf(LocalDate.now()));
                     List<Rental> customerRentals = Rental.createListFromResultSet(preparedStatement.executeQuery());
 
                     // Prints out customer's rentals
@@ -163,7 +160,7 @@ public class BikeRentalCustomerClient {
                 	// Retrieves customer rentals beyond current date
                     PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Rental r WHERE r.customer_id = ? AND r.checkout_date >= ? AND r.checked_out = true");
                     preparedStatement.setInt(1, customer.id);
-                    preparedStatement.setDate(2, new Date(LocalDate.now().toEpochDay()));
+                    preparedStatement.setDate(2, Date.valueOf(LocalDate.now()));
                     List<Rental> customerRentals = Rental.createListFromResultSet(preparedStatement.executeQuery());
                     
                     
@@ -201,14 +198,14 @@ public class BikeRentalCustomerClient {
                 	int ret = scanner.nextInt();
                 	
                 	PreparedStatement Return = connection.prepareStatement("UPDATE RENTAL r SET return_date = ? AND checked_out = false WHERE r.id = ?");
-                	Return.setDate(1, currentdate);
+                	Return.setDate(1, Date.valueOf(LocalDate.now()));
                 	Return.setInt(2, ret);
                 	Rental returnedRental = Rental.createFromResultSetRow(Return.executeQuery());
                 	Return.executeQuery();
-                	
-                	int daysdiff = currentdate.getDate() - returnedRental.dueDate.getDayOfMonth();
+
+                	long daysDiff = ChronoUnit.DAYS.between(LocalDate.now(), returnedRental.dueDate);
                 	float bikeCost = returnedRental.getBicycle(connection).costPerDay;
-                	float refund = daysdiff * bikeCost;
+                	float refund = daysDiff * bikeCost;
                 	
                 	System.out.println("Total refund is " + Float.toString(refund));
                 	
@@ -221,6 +218,22 @@ public class BikeRentalCustomerClient {
         } catch (SQLException e) {
             ConnectionManager.rollbackConnection(connection);
             e.printStackTrace();
+        } finally {
+            ConnectionManager.closeConnection(connection);
+        }
+    }
+
+    private static void menuOption() {
+        Connection connection = null;
+
+        try {
+            connection = ConnectionManager.getConnection();
+            //todo insert code for this menu option
+
+            // If successful, commit transaction (otherwise should not reach this point)
+            connection.commit();
+        } catch (SQLException e) {
+            ConnectionManager.rollbackConnection(connection);
         } finally {
             ConnectionManager.closeConnection(connection);
         }
