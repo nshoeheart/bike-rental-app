@@ -49,18 +49,18 @@ VALUES
 INSERT INTO Rental
     (bike_id, customer_id, checkout_date, due_date, return_date, checked_out)
 VALUES
-    (1, 3, 2017-03-30, 2017-04-06, NULL, true),
-    (3, 2, 2017-03-16, 2017-04-02, 2017-04-02, false),
-	(2, 1, 2017-03-30, 2017-04-02, 2017-04-01, false),
-	(4, 4, 2017-05-03, 2017-05-05, NULL, true);
+    (1, 3, '2017-03-30', '2017-04-06', NULL, true),
+    (3, 2, '2017-03-16', '2017-04-02', '2017-04-02', false),
+	(2, 1, '2017-03-30', '2017-04-02', '2017-04-01', false),
+	(4, 4, '2017-05-03', '2017-05-05', NULL, true);
 
 
 INSERT INTO PerformedService
-    (offered_service, bike_id, date_performed)
+    (offered_service_id, bike_id, date_performed)
 VALUES
-    (1, 1, 2017-03-30),
-    (2, 4, 2017-03-30),
-	(4, 4, 2017-03-31);
+    (1, 1, '2017-03-30'),
+    (2, 4, '2017-03-30'),
+	(4, 4, '2017-03-31');
 
 
 INSERT INTO ServicePlan

@@ -74,7 +74,7 @@ CREATE TABLE PerformedService (
     id INT NOT NULL AUTO_INCREMENT,
     offered_service_id INT NOT NULL,
     bike_id INT NOT NULL,
-    date_perfomed DATE NOT NULL,
+    date_performed DATE NOT NULL,
 
     PRIMARY KEY (id),
     FOREIGN KEY (offered_service_id) REFERENCES OfferedService(id) ON DELETE CASCADE,
