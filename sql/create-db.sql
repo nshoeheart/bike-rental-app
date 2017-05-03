@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS PerformedService;
 DROP TABLE IF EXISTS Rental;
 DROP TABLE IF EXISTS Bicycle;
 DROP TABLE IF EXISTS OfferedService;
-DROP TABLE IF EXISTS Condition;
+DROP TABLE IF EXISTS BikeCondition;
 DROP TABLE IF EXISTS Customer;
 DROP TABLE IF EXISTS Equipment;
 
@@ -49,10 +49,10 @@ CREATE TABLE Bicycle (
     make VARCHAR(100) NOT NULL,
     model VARCHAR(100) NOT NULL,
     cost_per_day FLOAT NOT NULL,
-    condition_id INT NOT NULL,
+    bike_condition_id INT NOT NULL,
 
     PRIMARY KEY (id),
-    FOREIGN KEY (condition_id) REFERENCES BikeCondition(id) ON DELETE CASCADE
+    FOREIGN KEY (bike_condition_id) REFERENCES BikeCondition(id) ON DELETE CASCADE
 );
 
 CREATE TABLE Rental (
@@ -81,10 +81,10 @@ CREATE TABLE PerformedService (
 );
 
 CREATE TABLE ServicePlan (
-    condition_id INT NOT NULL,
+    bike_condition_id INT NOT NULL,
     offered_service_id INT NOT NULL,
 
-    PRIMARY KEY (condition_id, offered_service_id),
-    FOREIGN KEY (condition_id) REFERENCES BikeCondition(id) ON DELETE CASCADE,
+    PRIMARY KEY (bike_condition_id, offered_service_id),
+    FOREIGN KEY (bike_condition_id) REFERENCES BikeCondition(id) ON DELETE CASCADE,
     FOREIGN KEY (offered_service_id) REFERENCES OfferedService(id) ON DELETE CASCADE
 );

@@ -16,16 +16,17 @@ import com.mysql.jdbc.Statement;
  */
 public class BikeRentalCustomerClient {
 
-    private String name;
-    private int id;
+    private static final int VIEW_RENTED_BIKES = 1;
+    private static final int VIEW_AVAIL_BIKES = 2;
+    private static final int CALC_COST = 3;
+    private static final int LIST_RESERVED = 4;
+    private static final int
 
-    public BikeRentalCustomerClient() {
-    	
-    }
-    
-    public BikeRentalCustomerClient(String name, int id) {
-        this.name = name;
-        this.id = id;
+    private int customerId;
+
+    public BikeRentalCustomerClient(int customerId) {
+        this.customerId = customerId;
+        //todo "login" either by getting the customer's existing info from database or prompting for user creation
     }
 
     public void run() {
@@ -158,9 +159,9 @@ public class BikeRentalCustomerClient {
             }
    
         } catch (SQLException e) {
-            //print error?
+            e.printStackTrace();
         } finally {
-            ConnectionManager.closeConnection(connection); //Ends client application
+            ConnectionManager.closeConnection(connection);
         }
     }
 }
