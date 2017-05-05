@@ -7,7 +7,6 @@ import util.ConnectionManager;
 
 import java.sql.*;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Scanner;
 
@@ -38,20 +37,22 @@ public class BikeRentalCustomerClient {
         Scanner scanner = null;
 
         try {
-            scanner = new Scanner(System.in);
             int command = 1;
 
             while (command != EXIT) {
+                scanner = new Scanner(System.in);
 
                 // Menu for commands, customer must enter 0 to exit app
-                System.out.print("Please enter the number of the command you wish to do:\n" +
+                System.out.print("Customer command menu:\n" +
                         "  0. Logout\n" +
                         "  1. View Currently Available Bikes\n" +
                         "  2. Make a Rental Reservation\n" +
                         "  3. View (And Optionally Cancel) Your Future Reservations\n");
 
                 // Get command from user
+                System.out.print("Command number: ");
                 command = Integer.parseInt(scanner.nextLine());
+                scanner.close();
 
                 if (command == EXIT) {
                     // Logs out and ends application
@@ -76,6 +77,9 @@ public class BikeRentalCustomerClient {
                 System.out.println();
                 System.out.println();
             }
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            e.printStackTrace();
         } finally {
             if (scanner != null) scanner.close();
         }
@@ -122,8 +126,8 @@ public class BikeRentalCustomerClient {
 
             // Get rental checkout date
             System.out.print("Enter the date you wish to rent the bike (format like YYYY-MM-DD, including the hyphens): ");
-            String in = scanner.nextLine();
-            LocalDate checkoutDate = LocalDate.parse(in);
+            String inputDate = scanner.nextLine();
+            LocalDate checkoutDate = LocalDate.parse(inputDate);
 
             // Get rental due date
             System.out.println("How many days would you like to rent it?");
@@ -144,10 +148,11 @@ public class BikeRentalCustomerClient {
                 // Print list of available bikes
                 System.out.println("Available bicycles for rent from " + checkoutDate + " to " + dueDate);
                 Bicycle.printBikeDetails(connection, availableBikes);
+                System.out.println();
 
                 // Prompt user to select bike for rental reservation
                 System.out.print("ID of bike to rent from " + checkoutDate + " to " + dueDate + " (or 0 to abort): ");
-                int bikeId = scanner.nextInt();
+                int bikeId = Integer.parseInt(scanner.nextLine());
 
                 if (bikeId != 0) {
                     // Attempt to reserve the bike rental
@@ -203,11 +208,13 @@ public class BikeRentalCustomerClient {
                 System.out.println("You do not currently have any future reservations");
             } else {
                 // Print a list of future rental reservations for this customer
-
+                System.out.println("Future bike rental reservations:");
+                Rental.printSimpleRentalDetails(futureRentals);
+                System.out.println();
 
                 // Allow customer to cancel a reservation if they choose
                 System.out.print("Enter ID of rental reservation to cancel it (or 0 to exit): ");
-                int rentalId = scanner.nextInt();
+                int rentalId = Integer.parseInt(scanner.nextLine());
 
                 if (rentalId != 0) {
                     // Cancel the selected reservation

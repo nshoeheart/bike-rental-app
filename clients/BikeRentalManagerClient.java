@@ -35,7 +35,7 @@ public class BikeRentalManagerClient {
             while (command != 0) {
 
                 // Menu for commands, manager must enter 0 to exit app
-                System.out.print("Please enter the number of the command you wish to do:\n" +
+                System.out.print("Manager Command Menu:\n" +
                         "  0. Logout\n" +
                         "  1. View All Current Rentals\n" +
                         "  2. Process Rental Checkout\n" +
@@ -89,19 +89,13 @@ public class BikeRentalManagerClient {
         try {
             connection = ConnectionManager.getConnection();
 
-//            getRentedBikes = connection.prepareStatement("SELECT * FROM Rental r WHERE r.checked_out = TRUE AND r.return_date IS NULL");
             getRentedBikes = connection.prepareStatement("SELECT * FROM Bicycle b WHERE NOT EXISTS (SELECT * FROM Rental r WHERE r.bike_id = b.id AND r.checked_out = TRUE AND r.return_date IS NULL)");
-//            List<Rental> rentals = Rental.createListFromResultSet(getRentedBikes.executeQuery());
             List<Bicycle> bicycles = Bicycle.createListFromResultSet(getRentedBikes.executeQuery());
 
             if (bicycles.isEmpty()) {
                 System.out.println("No bicycles are currently rented out.");
             } else {
-//                List<Bicycle> bicycles = new ArrayList<>();
-//                for (Rental rental : rentals) {
-//                    bicycles.add(rental.getBicycle(connection));
-//                }
-
+                // Print list of currently rented out bicycles
                 System.out.println("Bicycles currently rented out:");
                 Bicycle.printBikeDetails(connection, bicycles);
             }
@@ -138,14 +132,13 @@ public class BikeRentalManagerClient {
                 System.out.println("There are no bikes to be checked out today.");
             } else {
                 // Print list of rentals that can be processed to be checked out today
-                System.out.println("ID\tBike ID\tCustomer ID\tCheckout Date\tDue Date");
-                for (Rental rental : rentalsToCheckout) {
-                    System.out.println(String.format("%s\t%s\t\t%s\t\t\t%s\t\t\t%s", rental.id, rental.bikeId, rental.customerId, rental.checkoutDate, rental.dueDate));
-                }
+                System.out.println("Rentals that can be processed for checkout today:");
+                Rental.printSimpleRentalDetails(rentalsToCheckout);
+                System.out.println();
 
                 // Select which rental checkout to process
                 System.out.print("ID of rental to checkout (or 0 to abort): ");
-                int rentalId = scanner.nextInt();
+                int rentalId = Integer.parseInt(scanner.nextLine());
 
                 // Actually process the checkout
                 if (rentalId != 0) {
@@ -198,13 +191,12 @@ public class BikeRentalManagerClient {
                 System.out.println("There are no rentals currently checked out");
             } else {
                 // Print list of rentals that can be returned
-                System.out.println("ID\tBike ID\tCustomer ID\tCheckout Date\tDue Date");
-                for (Rental rental : checkedOutRentals) {
-                    System.out.println(String.format("%s\t%s\t\t%s\t\t\t%s\t\t\t%s", rental.id, rental.bikeId, rental.customerId, rental.checkoutDate, rental.dueDate));
-                }
+                System.out.println("Rentals that can be processed for returns:");
+                Rental.printSimpleRentalDetails(checkedOutRentals);
+                System.out.println();
 
                 System.out.print("ID of rental to return (or 0 to abort): ");
-                int rentalId = scanner.nextInt();
+                int rentalId = Integer.parseInt(scanner.nextLine());
 
                 if (rentalId != 0) {
                     processRentalReturn = connection.prepareStatement("UPDATE Rental r SET r.checked_out = FALSE AND r.return_date = ? WHERE r.id = ?");
@@ -329,11 +321,13 @@ public class BikeRentalManagerClient {
                 System.out.println("There are no bicycles in the shop");
             } else {
                 // Print list of bikes
+                System.out.println("Bikes in shop that can be serviced:");
                 Bicycle.printBikeDetails(connection, bicycles);
+                System.out.println();
 
                 // Prompt manager to select ID of bike to service
                 System.out.print("ID of bike to perform service on today (or 0 to abort): ");
-                int bikeId = scanner.nextInt();
+                int bikeId = Integer.parseInt(scanner.nextLine());
 
                 if (bikeId != 0) {
                     // Get list of available services to perform
@@ -344,11 +338,13 @@ public class BikeRentalManagerClient {
                         System.out.println("There are no services that can be performed on bikes");
                     } else {
                         // Print list of offered services
+                        System.out.println("Services that can be performed:");
                         OfferedService.printOfferedServiceDetails(offeredServices);
+                        System.out.println();
 
                         // Prompt manager to select ID of service to perform
                         System.out.print("ID of service to perform today (or 0 to abort): ");
-                        int offeredServiceId = scanner.nextInt();
+                        int offeredServiceId = Integer.parseInt(scanner.nextLine());
 
                         if (offeredServiceId != 0) {
                             // Record that this service was performed on this bike today

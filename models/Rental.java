@@ -117,4 +117,11 @@ public class Rental {
             if (closeResultSet) ConnectionManager.closeResultSet(resultSet);
         }
     }
+
+    public static void printSimpleRentalDetails(List<Rental> rentals) {
+        System.out.println("ID\tBike ID\tCustomer ID\tCheckout Date\tDue Date");
+        for (Rental rental : rentals) {
+            System.out.println(String.format("%s\t%s\t\t%s\t\t\t%s\t\t\t%s", rental.id, rental.bikeId, rental.customerId, rental.checkoutDate, rental.dueDate));
+        }
+    }
 }
