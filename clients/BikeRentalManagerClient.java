@@ -1,5 +1,6 @@
 package clients;
 
+import com.mysql.jdbc.MysqlErrorNumbers;
 import models.*;
 import util.ConnectionManager;
 
@@ -117,54 +118,75 @@ public class BikeRentalManagerClient {
         Connection connection = null;
         PreparedStatement getRentalsToCheckout = null;
         PreparedStatement checkoutRental = null;
+        boolean restart = false;
+        int numTries = 3;
 
-        try {
-            connection = ConnectionManager.getConnection();
+        do {
+            try {
+                connection = ConnectionManager.getConnection();
 
-            // Get a list of rentals that can be checked out (not yet checked out and today is the first day of reservation)
-            getRentalsToCheckout = connection.prepareStatement("SELECT * FROM Rental r WHERE r.checked_out = FALSE AND r.checkout_date = ?");
-            getRentalsToCheckout.setDate(1, Date.valueOf(LocalDate.now()));
-            List<Rental> rentalsToCheckout = Rental.createListFromResultSet(getRentalsToCheckout.executeQuery());
+                // Get a list of rentals that can be checked out (not yet checked out and today is the first day of reservation)
+                getRentalsToCheckout = connection.prepareStatement("SELECT * FROM Rental r WHERE r.checked_out = FALSE AND r.checkout_date = ?");
+                getRentalsToCheckout.setDate(1, Date.valueOf(LocalDate.now()));
+                List<Rental> rentalsToCheckout = Rental.createListFromResultSet(getRentalsToCheckout.executeQuery());
 
-            if (rentalsToCheckout.isEmpty()) {
-                System.out.println("There are no bikes to be checked out today.");
-            } else {
-                // Print list of rentals that can be processed to be checked out today
-                System.out.println("Rentals that can be processed for checkout today:");
-                Rental.printSimpleRentalDetails(rentalsToCheckout);
-                System.out.println();
+                if (rentalsToCheckout.isEmpty()) {
+                    System.out.println("There are no bikes to be checked out today.");
+                    restart = false;
+                } else {
+                    // Print list of rentals that can be processed to be checked out today
+                    System.out.println("Rentals that can be processed for checkout today:");
+                    Rental.printSimpleRentalDetails(rentalsToCheckout);
+                    System.out.println();
 
-                // Select which rental checkout to process
-                System.out.print("ID of rental to checkout (or 0 to abort): ");
-                int rentalId = Integer.parseInt(scanner.nextLine());
+                    // Select which rental checkout to process
+                    System.out.print("ID of rental to checkout (or 0 to abort): ");
+                    int rentalId = Integer.parseInt(scanner.nextLine());
 
-                // Actually process the checkout
-                if (rentalId != 0) {
-                    checkoutRental = connection.prepareStatement("UPDATE Rental r SET r.checked_out = TRUE WHERE r.id = ?");
-                    checkoutRental.setInt(1, rentalId);
-                    int success = checkoutRental.executeUpdate();
+                    // Actually process the checkout
+                    if (rentalId != 0) {
+                        checkoutRental = connection.prepareStatement("UPDATE Rental r SET r.checked_out = TRUE WHERE r.id = ?");
+                        checkoutRental.setInt(1, rentalId);
+                        checkoutRental.setQueryTimeout(5);
+                        int success = checkoutRental.executeUpdate();
 
-                    // Make sure the checkout was successful
-                    if (success == 1) {
-                        // Checkout was successful
-                        System.out.println("Rental with id: " + rentalId + " checked out successfully");
+                        // Make sure the checkout was successful
+                        if (success == 1) {
+                            // Checkout was successful
+                            System.out.println("Rental with id: " + rentalId + " checked out successfully");
+                        } else {
+                            // Checkout unsuccessful
+                            throw new SQLException("Unable to process checkout for rental with ID: " + rentalId);
+                        }
                     } else {
-                        // Checkout unsuccessful
-                        throw new SQLException("Unable to process checkout for rental with ID: " + rentalId);
+                        // rental ID is 0 - exit
+                        restart = false;
                     }
                 }
-            }
 
-            // If successful, commit transaction (otherwise should not reach this point)
-            connection.commit();
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            ConnectionManager.rollbackConnection(connection);
-        } finally {
-            ConnectionManager.closePreparedStatement(getRentalsToCheckout);
-            ConnectionManager.closePreparedStatement(checkoutRental);
-            ConnectionManager.closeConnection(connection);
-        }
+                // If successful, commit transaction (otherwise should not reach this point)
+                connection.commit();
+            }  catch (SQLException e) {
+                if (e.getErrorCode() == MysqlErrorNumbers.ER_LOCK_DEADLOCK) {
+                    System.out.println("Deadlock on table - restarting menu option\n");
+                    restart = true;
+                } else if ("Statement cancelled due to timeout or client request".equals(e.getMessage())) {
+                    System.out.println("Query timed out, possibly due to deadlock - restarting menu option\n");
+                    restart = true;
+                }
+
+                ConnectionManager.rollbackConnection(connection);
+            } catch (Exception e) {
+                restart = false;
+                System.out.println(e.getMessage());
+                ConnectionManager.rollbackConnection(connection);
+            } finally {
+                ConnectionManager.closePreparedStatement(getRentalsToCheckout);
+                ConnectionManager.closePreparedStatement(checkoutRental);
+                ConnectionManager.closeConnection(connection);
+            }
+        } while (restart && --numTries > 0);
+        if (numTries == 0) System.out.println("Maximum tries reached - exiting menu option");
     }
 
 
@@ -173,97 +195,116 @@ public class BikeRentalManagerClient {
         Connection connection = null;
         PreparedStatement getCheckedOutRentals = null;
         PreparedStatement processRentalReturn = null;
-        PreparedStatement getReturnedRental = null;
+        boolean restart = false;
+        int numTries = 3;
 
-        try {
-            connection = ConnectionManager.getConnection();
+        do {
+            try {
+                connection = ConnectionManager.getConnection();
 
-            // Get a list of rentals that are currently checked out
-            getCheckedOutRentals = connection.prepareStatement("SELECT * FROM Rental r WHERE r.checked_out = TRUE AND r.return_date IS NULL");
-            List<Rental> checkedOutRentals = Rental.createListFromResultSet(getCheckedOutRentals.executeQuery());
+                // Get a list of rentals that are currently checked out
+                getCheckedOutRentals = connection.prepareStatement("SELECT * FROM Rental r WHERE r.checked_out = TRUE AND r.return_date IS NULL");
+                List<Rental> checkedOutRentals = Rental.createListFromResultSet(getCheckedOutRentals.executeQuery());
 
-            if (checkedOutRentals.isEmpty()) {
-                System.out.println("There are no rentals currently checked out");
-            } else {
-                // Print list of rentals that can be returned
-                System.out.println("Rentals that can be processed for returns:");
-                Rental.printSimpleRentalDetails(checkedOutRentals);
-                System.out.println();
+                if (checkedOutRentals.isEmpty()) {
+                    System.out.println("There are no rentals currently checked out");
+                    restart = false;
+                } else {
+                    // Print list of rentals that can be returned
+                    System.out.println("Rentals that can be processed for returns:");
+                    Rental.printSimpleRentalDetails(checkedOutRentals);
+                    System.out.println();
 
-                System.out.print("ID of rental to return (or 0 to abort): ");
-                int rentalId = Integer.parseInt(scanner.nextLine());
+                    System.out.print("ID of rental to return (or 0 to abort): ");
+                    int rentalId = Integer.parseInt(scanner.nextLine());
 
-                if (rentalId != 0) {
-                    processRentalReturn = connection.prepareStatement("UPDATE Rental r SET r.return_date = ? WHERE r.id = ?");
-                    processRentalReturn.setDate(1, Date.valueOf(LocalDate.now()));
-                    processRentalReturn.setInt(2, rentalId);
-                    int success = processRentalReturn.executeUpdate();
+                    if (rentalId != 0) {
+                        processRentalReturn = connection.prepareStatement("UPDATE Rental r SET r.return_date = ? WHERE r.id = ?");
+                        processRentalReturn.setDate(1, Date.valueOf(LocalDate.now()));
+                        processRentalReturn.setInt(2, rentalId);
+                        processRentalReturn.setQueryTimeout(5);
+                        int success = processRentalReturn.executeUpdate();
 
-                    // Make sure the return was successful
-                    if (success == 1) {
-                        // Return was successful, but don't show message yet just in case error later
+                        // Make sure the return was successful
+                        if (success == 1) {
+                            // Return was successful, but don't show message yet just in case error later
 
-                        // Get the rental that was just returned
-                        Rental returnedRental = null;
-                        for (Rental rental : checkedOutRentals) {
-                            if (rentalId == rental.id) returnedRental = rental;
-                        }
-
-                        if (returnedRental == null) {
-                            throw new SQLException("Error getting data for returned rental");
-                        } else {
-                            System.out.println("Rental with ID: " + rentalId + " returned successfully");
-
-                            // Get necessary data for cost calculations
-                            LocalDate checkoutDate = returnedRental.checkoutDate;
-                            LocalDate returnDate = LocalDate.now();
-                            LocalDate dueDate = returnedRental.dueDate;
-                            float costPerDay = returnedRental.getBicycle(connection).costPerDay;
-
-                            System.out.println("Checkout date: " + checkoutDate.toString());
-                            System.out.println("Due date: " + dueDate.toString());
-                            System.out.println("Return date: " + returnDate.toString());
-
-                            // Perform cost calculations (rate doubled for days past end of rental reservation)
-                            float baseCost = costPerDay * (float) (ChronoUnit.DAYS.between(checkoutDate, dueDate));
-                            long returnDayDiff = (ChronoUnit.DAYS.between(dueDate, returnDate)) + 1;
-
-                            // Print rental cost summary
-                            if (returnDayDiff == 0) {
-                                // Return is on time
-                                System.out.printf("Total cost of rental: $%.2f\n", baseCost);
-                            } else if (returnDayDiff > 0) {
-                                // Return is late, add late fee rate to cost
-                                float lateFees = 2f * costPerDay * ((float) returnDayDiff);
-                                System.out.printf("Base cost of rental: $%.2f\n", baseCost);
-                                System.out.printf("Late fees: $%.2f\n", lateFees);
-                                System.out.printf("Total cost of rental: $%.2f\n", baseCost + lateFees);
-                            } else {
-                                // Return is early, apply refund to base cost
-                                float refund = -1f * costPerDay * ((float) returnDayDiff);
-                                System.out.printf("Base cost of rental: $%.2f\n", baseCost);
-                                System.out.printf("Refund: $%.2f\n", refund);
-                                System.out.printf("Total cost of rental: $%.2f\n", baseCost - refund);
+                            // Get the rental that was just returned
+                            Rental returnedRental = null;
+                            for (Rental rental : checkedOutRentals) {
+                                if (rentalId == rental.id) returnedRental = rental;
                             }
+
+                            if (returnedRental == null) {
+                                throw new SQLException("Error getting data for returned rental");
+                            } else {
+                                System.out.println("Rental with ID: " + rentalId + " returned successfully");
+
+                                // Get necessary data for cost calculations
+                                LocalDate checkoutDate = returnedRental.checkoutDate;
+                                LocalDate returnDate = LocalDate.now();
+                                LocalDate dueDate = returnedRental.dueDate;
+                                float costPerDay = returnedRental.getBicycle(connection).costPerDay;
+
+                                System.out.println("Checkout date: " + checkoutDate.toString());
+                                System.out.println("Due date: " + dueDate.toString());
+                                System.out.println("Return date: " + returnDate.toString());
+
+                                // Perform cost calculations (rate doubled for days past end of rental reservation)
+                                float baseCost = costPerDay * (float) (ChronoUnit.DAYS.between(checkoutDate, dueDate));
+                                long returnDayDiff = (ChronoUnit.DAYS.between(dueDate, returnDate)) + 1;
+
+                                // Print rental cost summary
+                                if (returnDayDiff == 0) {
+                                    // Return is on time
+                                    System.out.printf("Total cost of rental: $%.2f\n", baseCost);
+                                } else if (returnDayDiff > 0) {
+                                    // Return is late, add late fee rate to cost
+                                    float lateFees = 2f * costPerDay * ((float) returnDayDiff);
+                                    System.out.printf("Base cost of rental: $%.2f\n", baseCost);
+                                    System.out.printf("Late fees: $%.2f\n", lateFees);
+                                    System.out.printf("Total cost of rental: $%.2f\n", baseCost + lateFees);
+                                } else {
+                                    // Return is early, apply refund to base cost
+                                    float refund = -1f * costPerDay * ((float) returnDayDiff);
+                                    System.out.printf("Base cost of rental: $%.2f\n", baseCost);
+                                    System.out.printf("Refund: $%.2f\n", refund);
+                                    System.out.printf("Total cost of rental: $%.2f\n", baseCost - refund);
+                                }
+                            }
+                        } else {
+                            throw new SQLException("Unable to process return for rental with ID: " + rentalId);
                         }
                     } else {
-                        throw new SQLException("Unable to process return for rental with ID: " + rentalId);
+                        // Rental ID 0, exit
+                        restart = false;
                     }
                 }
-            }
 
-            // If successful, commit transaction (otherwise should not reach this point)
-            connection.commit();
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println(e.getMessage());
-            ConnectionManager.rollbackConnection(connection);
-        } finally {
-            ConnectionManager.closeConnection(connection);
-            ConnectionManager.closePreparedStatement(getCheckedOutRentals);
-            ConnectionManager.closePreparedStatement(processRentalReturn);
-            ConnectionManager.closePreparedStatement(getReturnedRental);
-        }
+                // If successful, commit transaction (otherwise should not reach this point)
+                connection.commit();
+            } catch (SQLException e) {
+                if (e.getErrorCode() == MysqlErrorNumbers.ER_LOCK_DEADLOCK) {
+                    System.out.println("Deadlock on table - restarting menu option\n");
+                    restart = true;
+                } else if ("Statement cancelled due to timeout or client request".equals(e.getMessage())) {
+                    System.out.println("Query timed out, possibly due to deadlock - restarting menu option\n");
+                    restart = true;
+                }
+
+                ConnectionManager.rollbackConnection(connection);
+            } catch (Exception e) {
+                restart = false;
+                System.out.println(e.getMessage());
+                ConnectionManager.rollbackConnection(connection);
+            } finally {
+                ConnectionManager.closeConnection(connection);
+                ConnectionManager.closePreparedStatement(getCheckedOutRentals);
+                ConnectionManager.closePreparedStatement(processRentalReturn);
+            }
+            // Loop until not set to restart or number of tries has been exhausted
+        } while (restart && --numTries > 0);
+        if (numTries == 0) System.out.println("Maximum tries reached - exiting menu option");
     }
 
     // Get a list of all bikes, their conditions, and the services required
@@ -302,75 +343,100 @@ public class BikeRentalManagerClient {
         PreparedStatement getBicycles = null;
         PreparedStatement getOfferedServices = null;
         PreparedStatement recordService = null;
+        boolean restart = false;
+        int numTries = 3;
 
-        try {
-            connection = ConnectionManager.getConnection();
+        do {
+            try {
+                connection = ConnectionManager.getConnection();
 
-            // Get a list of all bicycles in the shop
-            getBicycles = connection.prepareStatement("SELECT * FROM Bicycle b");
-            List<Bicycle> bicycles = Bicycle.createListFromResultSet(getBicycles.executeQuery());
+                // Get a list of all bicycles in the shop
+                getBicycles = connection.prepareStatement("SELECT * FROM Bicycle b");
+                List<Bicycle> bicycles = Bicycle.createListFromResultSet(getBicycles.executeQuery());
 
-            // Prompt manager to pick a bike to perform service on today
-            if (bicycles.isEmpty()) {
-                System.out.println("There are no bicycles in the shop");
-            } else {
-                // Print list of bikes
-                System.out.println("Bikes in shop that can be serviced:");
-                Bicycle.printBikeDetails(connection, bicycles);
-                System.out.println();
+                // Prompt manager to pick a bike to perform service on today
+                if (bicycles.isEmpty()) {
+                    System.out.println("There are no bicycles in the shop");
+                    restart = false;
+                } else {
+                    // Print list of bikes
+                    System.out.println("Bikes in shop that can be serviced:");
+                    Bicycle.printBikeDetails(connection, bicycles);
+                    System.out.println();
 
-                // Prompt manager to select ID of bike to service
-                System.out.print("ID of bike to perform service on today (or 0 to abort): ");
-                int bikeId = Integer.parseInt(scanner.nextLine());
+                    // Prompt manager to select ID of bike to service
+                    System.out.print("ID of bike to perform service on today (or 0 to abort): ");
+                    int bikeId = Integer.parseInt(scanner.nextLine());
 
-                if (bikeId != 0) {
-                    // Get list of available services to perform
-                    getOfferedServices = connection.prepareStatement("SELECT * FROM OfferedService os");
-                    List<OfferedService> offeredServices = OfferedService.createListFromResultSet(getOfferedServices.executeQuery());
+                    if (bikeId != 0) {
+                        // Get list of available services to perform
+                        getOfferedServices = connection.prepareStatement("SELECT * FROM OfferedService os");
+                        List<OfferedService> offeredServices = OfferedService.createListFromResultSet(getOfferedServices.executeQuery());
 
-                    if (offeredServices.isEmpty()) {
-                        System.out.println("There are no services that can be performed on bikes");
-                    } else {
-                        // Print list of offered services
-                        System.out.println("Services that can be performed:");
-                        OfferedService.printOfferedServiceDetails(offeredServices);
-                        System.out.println();
+                        if (offeredServices.isEmpty()) {
+                            System.out.println("There are no services that can be performed on bikes");
+                            restart = false;
+                        } else {
+                            // Print list of offered services
+                            System.out.println("Services that can be performed:");
+                            OfferedService.printOfferedServiceDetails(offeredServices);
+                            System.out.println();
 
-                        // Prompt manager to select ID of service to perform
-                        System.out.print("ID of service to perform today (or 0 to abort): ");
-                        int offeredServiceId = Integer.parseInt(scanner.nextLine());
+                            // Prompt manager to select ID of service to perform
+                            System.out.print("ID of service to perform today (or 0 to abort): ");
+                            int offeredServiceId = Integer.parseInt(scanner.nextLine());
 
-                        if (offeredServiceId != 0) {
-                            // Record that this service was performed on this bike today
-                            recordService = connection.prepareStatement("INSERT INTO PerformedService (offered_service_id, bike_id, date_performed) VALUES (?, ?, ?)");
-                            recordService.setInt(1, offeredServiceId);
-                            recordService.setInt(2, bikeId);
-                            recordService.setDate(3, Date.valueOf(LocalDate.now()));
-                            int success = recordService.executeUpdate();
+                            if (offeredServiceId != 0) {
+                                // Record that this service was performed on this bike today
+                                recordService = connection.prepareStatement("INSERT INTO PerformedService (offered_service_id, bike_id, date_performed) VALUES (?, ?, ?)");
+                                recordService.setInt(1, offeredServiceId);
+                                recordService.setInt(2, bikeId);
+                                recordService.setDate(3, Date.valueOf(LocalDate.now()));
+                                recordService.setQueryTimeout(5);
+                                int success = recordService.executeUpdate();
 
-                            // Make sure the insert was successful
-                            if (success == 1) {
-                                // Insert was successful
-                                System.out.println("Service with ID: " + offeredServiceId + " successfully recorded as performed on bike with ID: " + bikeId);
+                                // Make sure the insert was successful
+                                if (success == 1) {
+                                    // Insert was successful
+                                    System.out.println("Service with ID: " + offeredServiceId + " successfully recorded as performed on bike with ID: " + bikeId);
+                                } else {
+                                    // Insert was not successful
+                                    throw new SQLException("Unable to record service with ID: " + offeredServiceId + " performed on bike with ID: " + bikeId);
+                                }
                             } else {
-                                // Insert was not successful
-                                throw new SQLException("Unable to record service with ID: " + offeredServiceId + " performed on bike with ID: " + bikeId);
+                                // Offered service ID is 0 - exit
+                                restart = false;
                             }
                         }
+                    } else {
+                        // Bike ID is 0 - exit
+                        restart = false;
                     }
                 }
-            }
 
-            // If successful, commit transaction (otherwise should not reach this point)
-            connection.commit();
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            ConnectionManager.rollbackConnection(connection);
-        } finally {
-            ConnectionManager.closePreparedStatement(getBicycles);
-            ConnectionManager.closePreparedStatement(getOfferedServices);
-            ConnectionManager.closePreparedStatement(recordService);
-            ConnectionManager.closeConnection(connection);
-        }
+                // If successful, commit transaction (otherwise should not reach this point)
+                connection.commit();
+            }  catch (SQLException e) {
+                if (e.getErrorCode() == MysqlErrorNumbers.ER_LOCK_DEADLOCK) {
+                    System.out.println("Deadlock on table - restarting menu option\n");
+                    restart = true;
+                } else if ("Statement cancelled due to timeout or client request".equals(e.getMessage())) {
+                    System.out.println("Query timed out, possibly due to deadlock - restarting menu option\n");
+                    restart = true;
+                }
+
+                ConnectionManager.rollbackConnection(connection);
+            } catch (Exception e) {
+                restart = false;
+                System.out.println(e.getMessage());
+                ConnectionManager.rollbackConnection(connection);
+            } finally {
+                ConnectionManager.closePreparedStatement(getBicycles);
+                ConnectionManager.closePreparedStatement(getOfferedServices);
+                ConnectionManager.closePreparedStatement(recordService);
+                ConnectionManager.closeConnection(connection);
+            }
+        } while (restart && --numTries > 0);
+        if (numTries == 0) System.out.println("Maximum tries reached - exiting menu option");
     }
 }
