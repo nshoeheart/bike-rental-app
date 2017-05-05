@@ -86,7 +86,7 @@ public class OfferedService {
     public static void printOfferedServiceDetails(List<OfferedService> offeredServices) {
         System.out.println("Service ID\tService Name\tService Cost");
         for (OfferedService offeredService : offeredServices) {
-            System.out.println(String.format("%s\t\t%s\t\t%s", offeredService.id, offeredService.name, offeredService.cost));
+            System.out.println(String.format("%s\t\t%s\t%s", offeredService.id, offeredService.name, offeredService.cost));
         }
     }
 }

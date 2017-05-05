@@ -50,7 +50,7 @@ public class Rental {
         int result = preparedStatement.executeUpdate();
 
         if (result == 1) { // new Rental successfully inserted
-            ResultSet rentalRS =  connection.createStatement().executeQuery("SELECT LAST_INSERT_ID() AS id");
+            ResultSet rentalRS = connection.createStatement().executeQuery("SELECT LAST_INSERT_ID() AS id");
             if (rentalRS.next()) {
                 return getById(connection, rentalRS.getInt(1));
             } else {
@@ -71,7 +71,7 @@ public class Rental {
             resultSet = preparedStatement.executeQuery();
 
             if (resultSet.next()) {
-                return createFromResultSetRow(resultSet, false);
+                return createFromResultSetRow(resultSet);
             } else {
                 throw new SQLException("Rental with id: " + id + " not found");
             }
@@ -86,7 +86,7 @@ public class Rental {
             List<Rental> rentals = new ArrayList<>();
 
             while (resultSet.next()) {
-                rentals.add(createFromResultSetRow(resultSet, false));
+                rentals.add(createFromResultSetRow(resultSet));
             }
 
             return rentals;
@@ -95,33 +95,36 @@ public class Rental {
         }
     }
 
-    public static Rental createFromResultSetRow(ResultSet resultSet, boolean closeResultSet) throws SQLException {
-        try {
-            int id = resultSet.getInt("id");
-            int bikeId = resultSet.getInt("bike_id");
-            int customerId = resultSet.getInt("customer_id");
-            LocalDate checkoutDate = Instant.ofEpochMilli(resultSet.getDate("checkout_date").getTime()).atZone(ZoneId.systemDefault()).toLocalDate(); // convert from Date to LocalDate
-            LocalDate dueDate = Instant.ofEpochMilli(resultSet.getDate("due_date").getTime()).atZone(ZoneId.systemDefault()).toLocalDate(); // convert from Date to LocalDate
-            LocalDate returnDate;
-
-            try {
-                Date returnDateSql = resultSet.getDate("return_date");
-                returnDate = (returnDateSql == null ? null : Instant.ofEpochMilli(returnDateSql.getTime()).atZone(ZoneId.systemDefault()).toLocalDate()); // convert from Date to LocalDate
-            } catch (SQLException e) {
-                returnDate = null;
-            }
-            boolean checkedOut = resultSet.getBoolean("checked_out");
-
-            return new Rental(id, bikeId, customerId, checkoutDate, dueDate, returnDate, checkedOut);
-        } finally {
-            if (closeResultSet) ConnectionManager.closeResultSet(resultSet);
+    private static Rental createFromResultSetRow(ResultSet resultSet) throws SQLException {
+        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+        System.out.println("Columns returned:");
+        for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+            System.out.println(i + ": " + resultSetMetaData.getColumnLabel(i));
         }
+
+        int id = resultSet.getInt("id");
+        int bikeId = resultSet.getInt("bike_id");
+        int customerId = resultSet.getInt("customer_id");
+        LocalDate checkoutDate = resultSet.getDate("checkout_date").toLocalDate(); // convert from Date to LocalDate
+        LocalDate dueDate = resultSet.getDate("due_date").toLocalDate(); // convert from Date to LocalDate
+        LocalDate returnDate;
+
+        try {
+            Date returnDateSql = resultSet.getDate("return_date");
+            System.out.println("Return Date Value: " + returnDateSql);
+            returnDate = (returnDateSql == null ? null : returnDateSql.toLocalDate()); // convert from Date to LocalDate
+        } catch (SQLException e) {
+            returnDate = null;
+        }
+        boolean checkedOut = resultSet.getBoolean("checked_out");
+
+        return new Rental(id, bikeId, customerId, checkoutDate, dueDate, returnDate, checkedOut);
     }
 
     public static void printSimpleRentalDetails(List<Rental> rentals) {
         System.out.println("ID\tBike ID\tCustomer ID\tCheckout Date\tDue Date");
         for (Rental rental : rentals) {
-            System.out.println(String.format("%s\t%s\t\t%s\t\t\t%s\t\t\t%s", rental.id, rental.bikeId, rental.customerId, rental.checkoutDate, rental.dueDate));
+            System.out.println(String.format("%s\t%s\t%s\t\t%s\t%s", rental.id, rental.bikeId, rental.customerId, rental.checkoutDate, rental.dueDate));
         }
     }
 }

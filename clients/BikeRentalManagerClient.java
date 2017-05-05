@@ -88,7 +88,7 @@ public class BikeRentalManagerClient {
         try {
             connection = ConnectionManager.getConnection();
 
-            getRentedBikes = connection.prepareStatement("SELECT * FROM Bicycle b WHERE NOT EXISTS (SELECT * FROM Rental r WHERE r.bike_id = b.id AND r.checked_out = TRUE AND r.return_date IS NULL)");
+            getRentedBikes = connection.prepareStatement("SELECT * FROM Bicycle b WHERE EXISTS (SELECT * FROM Rental r WHERE r.bike_id = b.id AND r.checked_out = TRUE AND r.return_date IS NULL)");
             List<Bicycle> bicycles = Bicycle.createListFromResultSet(getRentedBikes.executeQuery());
 
             if (bicycles.isEmpty()) {
@@ -193,46 +193,57 @@ public class BikeRentalManagerClient {
                 int rentalId = Integer.parseInt(scanner.nextLine());
 
                 if (rentalId != 0) {
-                    processRentalReturn = connection.prepareStatement("UPDATE Rental r SET r.checked_out = FALSE AND r.return_date = ? WHERE r.id = ?");
+                    processRentalReturn = connection.prepareStatement("UPDATE Rental r SET r.return_date = ? WHERE r.id = ?");
                     processRentalReturn.setDate(1, Date.valueOf(LocalDate.now()));
                     processRentalReturn.setInt(2, rentalId);
                     int success = processRentalReturn.executeUpdate();
 
                     // Make sure the return was successful
                     if (success == 1) {
-                        // Return was successful
-                        System.out.println("Rental with ID: " + rentalId + " returned successfully");
+                        // Return was successful, but don't show message yet just in case error later
 
                         // Get the rental that was just returned
-                        getReturnedRental = connection.prepareStatement("SELECT * FROM Rental r WHERE r.id = ?");
-                        getReturnedRental.setInt(1, rentalId);
-                        Rental rental = Rental.createFromResultSetRow(getReturnedRental.executeQuery(), true);
+                        Rental returnedRental = null;
+                        for (Rental rental : checkedOutRentals) {
+                            if (rentalId == rental.id) returnedRental = rental;
+                        }
 
-                        // Get necessary data for cost calculations
-                        LocalDate checkoutDate = rental.checkoutDate;
-                        LocalDate returnDate = rental.returnDate;
-                        LocalDate dueDate = rental.dueDate;
-                        float costPerDay = rental.getBicycle(connection).costPerDay;
-
-                        // Perform cost calculations (rate doubled for days past end of rental reservation)
-                        float baseCost = costPerDay * (float) (ChronoUnit.DAYS.between(checkoutDate, dueDate));
-                        long returnDayDiff = (ChronoUnit.DAYS.between(dueDate, returnDate));
-
-                        if (returnDayDiff == 0) {
-                            // Return is on time
-                            System.out.printf("Total cost of rental: $%.2f\n", baseCost);
-                        } else if (returnDayDiff > 0) {
-                            // Return is late, add late fee rate to cost
-                            float lateFees = 2f * costPerDay * ((float) returnDayDiff);
-                            System.out.printf("Base cost of rental: $%.2f\n", baseCost);
-                            System.out.printf("Late fees: $%.2f\n", lateFees);
-                            System.out.printf("Total cost of rental: $%.2f\n", baseCost + lateFees);
+                        if (returnedRental == null) {
+                            throw new SQLException("Error getting data for returned rental");
                         } else {
-                            // Return is early, apply refund to base cost
-                            float refund = -1f * costPerDay * ((float) returnDayDiff);
-                            System.out.printf("Base cost of rental: $%.2f\n", baseCost);
-                            System.out.printf("Refund: $%.2f\n", refund);
-                            System.out.printf("Total cost of rental: $%.2f\n", baseCost - refund);
+                            System.out.println("Rental with ID: " + rentalId + " returned successfully");
+
+                            // Get necessary data for cost calculations
+                            LocalDate checkoutDate = returnedRental.checkoutDate;
+                            LocalDate returnDate = LocalDate.now();
+                            LocalDate dueDate = returnedRental.dueDate;
+                            float costPerDay = returnedRental.getBicycle(connection).costPerDay;
+
+                            System.out.println("Checkout date: " + checkoutDate.toString());
+                            System.out.println("Due date: " + dueDate.toString());
+                            System.out.println("Return date: " + returnDate.toString());
+
+                            // Perform cost calculations (rate doubled for days past end of rental reservation)
+                            float baseCost = costPerDay * (float) (ChronoUnit.DAYS.between(checkoutDate, dueDate));
+                            long returnDayDiff = (ChronoUnit.DAYS.between(dueDate, returnDate)) + 1;
+
+                            // Print rental cost summary
+                            if (returnDayDiff == 0) {
+                                // Return is on time
+                                System.out.printf("Total cost of rental: $%.2f\n", baseCost);
+                            } else if (returnDayDiff > 0) {
+                                // Return is late, add late fee rate to cost
+                                float lateFees = 2f * costPerDay * ((float) returnDayDiff);
+                                System.out.printf("Base cost of rental: $%.2f\n", baseCost);
+                                System.out.printf("Late fees: $%.2f\n", lateFees);
+                                System.out.printf("Total cost of rental: $%.2f\n", baseCost + lateFees);
+                            } else {
+                                // Return is early, apply refund to base cost
+                                float refund = -1f * costPerDay * ((float) returnDayDiff);
+                                System.out.printf("Base cost of rental: $%.2f\n", baseCost);
+                                System.out.printf("Refund: $%.2f\n", refund);
+                                System.out.printf("Total cost of rental: $%.2f\n", baseCost - refund);
+                            }
                         }
                     } else {
                         throw new SQLException("Unable to process return for rental with ID: " + rentalId);
@@ -243,6 +254,7 @@ public class BikeRentalManagerClient {
             // If successful, commit transaction (otherwise should not reach this point)
             connection.commit();
         } catch (Exception e) {
+            e.printStackTrace();
             System.out.println(e.getMessage());
             ConnectionManager.rollbackConnection(connection);
         } finally {
@@ -269,17 +281,7 @@ public class BikeRentalManagerClient {
             } else {
                 // For each bicycle, print information (including its condition) and its service plan
                 System.out.println("Bicycles in shop and their required services:");
-                System.out.println("ID\tMake\t\tModel\t\tCost/Day\t\tCondition");
-                for (Bicycle bike : bicycles) {
-                    // Print the bike's info
-                    System.out.println(String.format("%s\t%s\t\t%s\t\t%s\t\t%s", bike.id, bike.make, bike.model, bike.costPerDay, bike.getBikeCondition(connection).name));
-
-                    // Get and print the bike's service plan
-                    OfferedService.printOfferedServiceDetails(ServicePlan.getServicePlan(connection, bike.bikeConditionId));
-
-                    // Add a break line for readability
-                    System.out.println();
-                }
+                Bicycle.printBikeDetailsAndServicePlans(connection, bicycles);
             }
 
             // If successful, commit transaction (otherwise should not reach this point)

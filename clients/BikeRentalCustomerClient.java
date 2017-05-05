@@ -91,7 +91,11 @@ public class BikeRentalCustomerClient {
         try {
             connection = ConnectionManager.getConnection();
 
-            getCurrentlyAvailableBikes = connection.prepareStatement("SELECT * FROM Bicycle b WHERE NOT EXISTS (SELECT * FROM Rental r WHERE r.bike_id = b.id AND r.checked_out = TRUE AND r.return_date IS NULL)");
+            // Get bikes that are both not currently checked out and are not reserved for checkout today
+            getCurrentlyAvailableBikes = connection.prepareStatement("SELECT * FROM Bicycle b WHERE NOT EXISTS " +
+                    "(SELECT * FROM Rental r WHERE r.bike_id = b.id AND " +
+                    "((r.checked_out = TRUE AND r.return_date IS NULL) OR (r.checkout_date = ?)))");
+            getCurrentlyAvailableBikes.setDate(1, Date.valueOf(LocalDate.now()));
             List<Bicycle> currentlyAvailableBikes = Bicycle.createListFromResultSet(getCurrentlyAvailableBikes.executeQuery());
 
             if (currentlyAvailableBikes.isEmpty()) {
@@ -128,7 +132,7 @@ public class BikeRentalCustomerClient {
             LocalDate checkoutDate = LocalDate.parse(inputDate);
 
             // Get rental due date
-            System.out.println("How many days would you like to rent it?");
+            System.out.print("Enter number of days to rent: ");
             int length = Integer.parseInt(scanner.nextLine());
             LocalDate dueDate = checkoutDate.plusDays(length);
 
@@ -216,7 +220,7 @@ public class BikeRentalCustomerClient {
 
                 if (rentalId != 0) {
                     // Cancel the selected reservation
-                    cancelFutureReservation = connection.prepareStatement("DELETE FROM Rental r WHERE r.id = ?");
+                    cancelFutureReservation = connection.prepareStatement("DELETE FROM Rental WHERE id = ?");
                     cancelFutureReservation.setInt(1, rentalId);
                     int success = cancelFutureReservation.executeUpdate();
 
