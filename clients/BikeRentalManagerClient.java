@@ -88,16 +88,19 @@ public class BikeRentalManagerClient {
 
         try {
             connection = ConnectionManager.getConnection();
-            getRentedBikes = connection.prepareStatement("SELECT * FROM Rental r WHERE r.checked_out = TRUE AND r.return_date IS NULL");
-            List<Rental> rentals = Rental.createListFromResultSet(getRentedBikes.executeQuery());
 
-            if (rentals.isEmpty()) {
+//            getRentedBikes = connection.prepareStatement("SELECT * FROM Rental r WHERE r.checked_out = TRUE AND r.return_date IS NULL");
+            getRentedBikes = connection.prepareStatement("SELECT * FROM Bicycle b WHERE NOT EXISTS (SELECT * FROM Rental r WHERE r.bike_id = b.id AND r.checked_out = TRUE AND r.return_date IS NULL)");
+//            List<Rental> rentals = Rental.createListFromResultSet(getRentedBikes.executeQuery());
+            List<Bicycle> bicycles = Bicycle.createListFromResultSet(getRentedBikes.executeQuery());
+
+            if (bicycles.isEmpty()) {
                 System.out.println("No bicycles are currently rented out.");
             } else {
-                List<Bicycle> bicycles = new ArrayList<>();
-                for (Rental rental : rentals) {
-                    bicycles.add(rental.getBicycle(connection));
-                }
+//                List<Bicycle> bicycles = new ArrayList<>();
+//                for (Rental rental : rentals) {
+//                    bicycles.add(rental.getBicycle(connection));
+//                }
 
                 System.out.println("Bicycles currently rented out:");
                 Bicycle.printBikeDetails(connection, bicycles);
