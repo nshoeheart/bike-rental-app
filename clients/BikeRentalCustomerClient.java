@@ -119,7 +119,7 @@ public class BikeRentalCustomerClient {
 
             // Allows user to query to DB based on commands they select
             Statement statement1 = connection.createStatement();
-            ResultSet result1 = statement1.executeQuery("SELECT * FROM Rental r WHERE r.checked_out = false AND return_date != NULL"); // Returns in result all bikes on rental table available for rental
+            ResultSet result1 = statement1.executeQuery("SELECT * FROM Rental r WHERE r.checked_out = false AND r.return_date != NULL"); // Returns in result all bikes on rental table available for rental
             System.out.print("Please select one of the following bikes to rent by entering the id associated with the bike; "
                     + "\n type '0' to go back to main menu:\n");
 
@@ -185,15 +185,15 @@ public class BikeRentalCustomerClient {
 
 
             // Retrieves customer rentals
-            PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Rental r WHERE r.customer_id = ? AND r.checkout_date >= ?");
+            PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Rental r WHERE r.customer_id = ? AND r.return_date IS NULL");
             preparedStatement.setInt(1, customer_id);
             preparedStatement.setDate(2, Date.valueOf(LocalDate.now()));
             List<Rental> customerRentals = Rental.createListFromResultSet(preparedStatement.executeQuery());
 
             if (customerRentals.isEmpty()) System.out.println("Rentals list empty");
             // Prints out customer's rentals
-            for (int i = 0; i < customerRentals.size(); i++) {
-                System.out.println(customerRentals.get(i).toString());
+            for (Rental rent : customerRentals){
+                System.out.println(rent.bikeId);
             }
 
             // If successful, commit transaction (otherwise should not reach this point)
@@ -271,7 +271,7 @@ public class BikeRentalCustomerClient {
 
             int ret = scanner.nextInt();
 
-            PreparedStatement Return = connection.prepareStatement("UPDATE RENTAL r SET return_date = ? AND checked_out = false WHERE r.id = ?");
+            PreparedStatement Return = connection.prepareStatement("UPDATE Rental r SET r.return_date = ? AND r.checked_out = false WHERE r.id = ?");
             Return.setDate(1, Date.valueOf(LocalDate.now()));
             Return.setInt(2, ret);
             Rental returnedRental = Rental.createFromResultSetRow(Return.executeQuery());
