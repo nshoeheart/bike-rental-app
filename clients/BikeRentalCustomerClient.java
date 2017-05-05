@@ -165,6 +165,7 @@ public class BikeRentalCustomerClient {
                         reserveBikeRental.setInt(2, customerId);
                         reserveBikeRental.setDate(3, Date.valueOf(checkoutDate));
                         reserveBikeRental.setDate(4, Date.valueOf(dueDate));
+                        reserveBikeRental.setQueryTimeout(5);
                         int success = reserveBikeRental.executeUpdate();
 
                         // Check to see if the rental was reserved successfully
@@ -245,6 +246,7 @@ public class BikeRentalCustomerClient {
                         // Cancel the selected reservation
                         cancelFutureReservation = connection.prepareStatement("DELETE FROM Rental WHERE id = ?");
                         cancelFutureReservation.setInt(1, rentalId);
+                        cancelFutureReservation.setQueryTimeout(5);
                         int success = cancelFutureReservation.executeUpdate();
 
                         // Make sure the reservation was actually cancelled
