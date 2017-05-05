@@ -167,12 +167,15 @@ public class BikeRentalManagerClient {
                 // If successful, commit transaction (otherwise should not reach this point)
                 connection.commit();
             }  catch (SQLException e) {
+                // Handle database deadlock or query timeout situations
                 if (e.getErrorCode() == MysqlErrorNumbers.ER_LOCK_DEADLOCK) {
                     System.out.println("Deadlock on table - restarting menu option\n");
                     restart = true;
                 } else if ("Statement cancelled due to timeout or client request".equals(e.getMessage())) {
                     System.out.println("Query timed out, possibly due to deadlock - restarting menu option\n");
                     restart = true;
+                } else {
+                    System.out.println(e.getMessage());
                 }
 
                 ConnectionManager.rollbackConnection(connection);
@@ -284,12 +287,15 @@ public class BikeRentalManagerClient {
                 // If successful, commit transaction (otherwise should not reach this point)
                 connection.commit();
             } catch (SQLException e) {
+                // Handle database deadlock or query timeout situations
                 if (e.getErrorCode() == MysqlErrorNumbers.ER_LOCK_DEADLOCK) {
                     System.out.println("Deadlock on table - restarting menu option\n");
                     restart = true;
                 } else if ("Statement cancelled due to timeout or client request".equals(e.getMessage())) {
                     System.out.println("Query timed out, possibly due to deadlock - restarting menu option\n");
                     restart = true;
+                } else {
+                    System.out.println(e.getMessage());
                 }
 
                 ConnectionManager.rollbackConnection(connection);
@@ -417,12 +423,15 @@ public class BikeRentalManagerClient {
                 // If successful, commit transaction (otherwise should not reach this point)
                 connection.commit();
             }  catch (SQLException e) {
+                // Handle database deadlock or query timeout situations
                 if (e.getErrorCode() == MysqlErrorNumbers.ER_LOCK_DEADLOCK) {
                     System.out.println("Deadlock on table - restarting menu option\n");
                     restart = true;
                 } else if ("Statement cancelled due to timeout or client request".equals(e.getMessage())) {
                     System.out.println("Query timed out, possibly due to deadlock - restarting menu option\n");
                     restart = true;
+                } else {
+                    System.out.println(e.getMessage());
                 }
 
                 ConnectionManager.rollbackConnection(connection);

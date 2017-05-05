@@ -1,5 +1,6 @@
 package clients;
 
+import com.mysql.jdbc.MysqlErrorNumbers;
 import models.Bicycle;
 import models.Customer;
 import models.Rental;
@@ -77,7 +78,6 @@ public class BikeRentalCustomerClient {
             }
         } catch (Exception e) {
             System.out.println(e.getMessage());
-            e.printStackTrace();
         } finally {
             if (scanner != null) scanner.close();
         }
@@ -120,70 +120,94 @@ public class BikeRentalCustomerClient {
         Connection connection = null;
         PreparedStatement getAvailableBikes = null;
         PreparedStatement reserveBikeRental = null;
+        boolean restart = false;
+        int numTries = 3;
 
-        try {
-            connection = ConnectionManager.getConnection();
+        do {
+            try {
+                connection = ConnectionManager.getConnection();
 
-            // Get rental checkout date
-            System.out.print("Enter the date you wish to rent the bike (format like YYYY-MM-DD, including the hyphens): ");
-            String inputDate = scanner.nextLine();
-            LocalDate checkoutDate = LocalDate.parse(inputDate);
+                // Get rental checkout date
+                System.out.print("Enter the date you wish to rent the bike (format like YYYY-MM-DD, including the hyphens): ");
+                String inputDate = scanner.nextLine();
+                LocalDate checkoutDate = LocalDate.parse(inputDate);
 
-            // Get rental due date
-            System.out.print("Enter number of days to rent: ");
-            int length = Integer.parseInt(scanner.nextLine());
-            LocalDate dueDate = checkoutDate.plusDays(length);
+                // Get rental due date
+                System.out.print("Enter number of days to rent: ");
+                int length = Integer.parseInt(scanner.nextLine());
+                LocalDate dueDate = checkoutDate.plusDays(length);
 
-            // Find bikes that are available for the entirety of the desired date range
-            getAvailableBikes = connection.prepareStatement("SELECT * FROM Bicycle b WHERE " +
-                    "NOT EXISTS (SELECT * FROM Rental r WHERE r.bike_id = b.id " +
-                    "AND ((? BETWEEN r.checkout_date AND r.due_date) OR (? BETWEEN r.checkout_date AND r.due_date)))");
-            getAvailableBikes.setDate(1, Date.valueOf(checkoutDate));
-            getAvailableBikes.setDate(2, Date.valueOf(dueDate));
-            List<Bicycle> availableBikes = Bicycle.createListFromResultSet(getAvailableBikes.executeQuery());
+                // Find bikes that are available for the entirety of the desired date range
+                getAvailableBikes = connection.prepareStatement("SELECT * FROM Bicycle b WHERE " +
+                        "NOT EXISTS (SELECT * FROM Rental r WHERE r.bike_id = b.id " +
+                        "AND ((? BETWEEN r.checkout_date AND r.due_date) OR (? BETWEEN r.checkout_date AND r.due_date)))");
+                getAvailableBikes.setDate(1, Date.valueOf(checkoutDate));
+                getAvailableBikes.setDate(2, Date.valueOf(dueDate));
+                List<Bicycle> availableBikes = Bicycle.createListFromResultSet(getAvailableBikes.executeQuery());
 
-            if (availableBikes.isEmpty()) {
-                System.out.println("There are no bikes available for rent over the date range " + checkoutDate + " to " + dueDate);
-            } else {
-                // Print list of available bikes
-                System.out.println("Available bicycles for rent from " + checkoutDate + " to " + dueDate);
-                Bicycle.printBikeDetails(connection, availableBikes);
-                System.out.println();
+                if (availableBikes.isEmpty()) {
+                    System.out.println("There are no bikes available for rent over the date range " + checkoutDate + " to " + dueDate);
+                    restart = false;
+                } else {
+                    // Print list of available bikes
+                    System.out.println("Available bicycles for rent from " + checkoutDate + " to " + dueDate);
+                    Bicycle.printBikeDetails(connection, availableBikes);
+                    System.out.println();
 
-                // Prompt user to select bike for rental reservation
-                System.out.print("ID of bike to rent from " + checkoutDate + " to " + dueDate + " (or 0 to abort): ");
-                int bikeId = Integer.parseInt(scanner.nextLine());
+                    // Prompt user to select bike for rental reservation
+                    System.out.print("ID of bike to rent from " + checkoutDate + " to " + dueDate + " (or 0 to abort): ");
+                    int bikeId = Integer.parseInt(scanner.nextLine());
 
-                if (bikeId != 0) {
-                    // Attempt to reserve the bike rental
-                    reserveBikeRental = connection.prepareStatement("INSERT INTO Rental (bike_id, customer_id, checkout_date, due_date, return_date, checked_out) VALUES (?, ?, ?, ?, NULL, FALSE)");
-                    reserveBikeRental.setInt(1, bikeId);
-                    reserveBikeRental.setInt(2, customerId);
-                    reserveBikeRental.setDate(3, Date.valueOf(checkoutDate));
-                    reserveBikeRental.setDate(4, Date.valueOf(dueDate));
-                    int success = reserveBikeRental.executeUpdate();
+                    if (bikeId != 0) {
+                        // Attempt to reserve the bike rental
+                        reserveBikeRental = connection.prepareStatement("INSERT INTO Rental (bike_id, customer_id, checkout_date, due_date, return_date, checked_out) VALUES (?, ?, ?, ?, NULL, FALSE)");
+                        reserveBikeRental.setInt(1, bikeId);
+                        reserveBikeRental.setInt(2, customerId);
+                        reserveBikeRental.setDate(3, Date.valueOf(checkoutDate));
+                        reserveBikeRental.setDate(4, Date.valueOf(dueDate));
+                        int success = reserveBikeRental.executeUpdate();
 
-                    // Check to see if the rental was reserved successfully
-                    if (success == 1) {
-                        // Rental successfully reserved
-                        System.out.println("Rental for bike with ID: " + bikeId + " successfully reserved from " + checkoutDate + " to " + dueDate);
+                        // Check to see if the rental was reserved successfully
+                        if (success == 1) {
+                            // Rental successfully reserved
+                            System.out.println("Rental for bike with ID: " + bikeId + " successfully reserved from " + checkoutDate + " to " + dueDate);
+                        } else {
+                            // Rental reservation failed
+                            throw new SQLException("Failed to reserve rental for bike with ID: " + bikeId + " from " + checkoutDate + " to " + dueDate);
+                        }
                     } else {
-                        // Rental reservation failed
-                        throw new SQLException("Failed to reserve rental for bike with ID: " + bikeId + " from " + checkoutDate + " to " + dueDate);
+                        // Bike ID is 0, exit
+                        restart = false;
                     }
                 }
-            }
 
-            // If successful to this point, commit transaction
-            connection.commit();
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            ConnectionManager.rollbackConnection(connection);
-        } finally {
-            ConnectionManager.closeConnection(connection);
-            ConnectionManager.closePreparedStatement(getAvailableBikes);
-            ConnectionManager.closePreparedStatement(reserveBikeRental);
-        }
+                // If successful to this point, commit transaction
+                connection.commit();
+            }  catch (SQLException e) {
+                // Handle database deadlock or query timeout situations
+                if (e.getErrorCode() == MysqlErrorNumbers.ER_LOCK_DEADLOCK) {
+                    System.out.println("Deadlock on table - restarting menu option\n");
+                    restart = true;
+                } else if ("Statement cancelled due to timeout or client request".equals(e.getMessage())) {
+                    System.out.println("Query timed out, possibly due to deadlock - restarting menu option\n");
+                    restart = true;
+                } else {
+                    System.out.println(e.getMessage());
+                }
+
+                ConnectionManager.rollbackConnection(connection);
+            } catch (Exception e) {
+                restart = false;
+                System.out.println(e.getMessage());
+                ConnectionManager.rollbackConnection(connection);
+            } finally {
+                ConnectionManager.closeConnection(connection);
+                ConnectionManager.closePreparedStatement(getAvailableBikes);
+                ConnectionManager.closePreparedStatement(reserveBikeRental);
+            }
+            // Loop until not set to restart or number of tries has been exhausted
+        } while (restart && --numTries > 0);
+        if (numTries == 0) System.out.println("Maximum tries reached - exiting menu option");
     }
 
     // Shows a user their future rental reservations and allow user to cancel one if they choose
@@ -191,53 +215,77 @@ public class BikeRentalCustomerClient {
         Connection connection = null;
         PreparedStatement getFutureReservations = null;
         PreparedStatement cancelFutureReservation = null;
+        boolean restart = false;
+        int numTries = 3;
 
-        try {
-            connection = ConnectionManager.getConnection();
+        do {
+            try {
+                connection = ConnectionManager.getConnection();
 
-            // Get a list of future rental reservations for this customer
-            getFutureReservations = connection.prepareStatement("SELECT * FROM Rental r WHERE r.customer_id = ? AND r.checkout_date > ?");
-            getFutureReservations.setInt(1, customerId);
-            getFutureReservations.setDate(2, Date.valueOf(LocalDate.now()));
-            List<Rental> futureRentals = Rental.createListFromResultSet(getFutureReservations.executeQuery());
+                // Get a list of future rental reservations for this customer
+                getFutureReservations = connection.prepareStatement("SELECT * FROM Rental r WHERE r.customer_id = ? AND r.checkout_date > ?");
+                getFutureReservations.setInt(1, customerId);
+                getFutureReservations.setDate(2, Date.valueOf(LocalDate.now()));
+                List<Rental> futureRentals = Rental.createListFromResultSet(getFutureReservations.executeQuery());
 
-            if (futureRentals.isEmpty()) {
-                System.out.println("You do not currently have any future reservations");
-            } else {
-                // Print a list of future rental reservations for this customer
-                System.out.println("Future bike rental reservations:");
-                Rental.printSimpleRentalDetails(futureRentals);
-                System.out.println();
+                if (futureRentals.isEmpty()) {
+                    System.out.println("You do not currently have any future reservations");
+                    restart = false;
+                } else {
+                    // Print a list of future rental reservations for this customer
+                    System.out.println("Future bike rental reservations:");
+                    Rental.printSimpleRentalDetails(futureRentals);
+                    System.out.println();
 
-                // Allow customer to cancel a reservation if they choose
-                System.out.print("Enter ID of rental reservation to cancel it (or 0 to exit): ");
-                int rentalId = Integer.parseInt(scanner.nextLine());
+                    // Allow customer to cancel a reservation if they choose
+                    System.out.print("Enter ID of rental reservation to cancel it (or 0 to exit): ");
+                    int rentalId = Integer.parseInt(scanner.nextLine());
 
-                if (rentalId != 0) {
-                    // Cancel the selected reservation
-                    cancelFutureReservation = connection.prepareStatement("DELETE FROM Rental WHERE id = ?");
-                    cancelFutureReservation.setInt(1, rentalId);
-                    int success = cancelFutureReservation.executeUpdate();
+                    if (rentalId != 0) {
+                        // Cancel the selected reservation
+                        cancelFutureReservation = connection.prepareStatement("DELETE FROM Rental WHERE id = ?");
+                        cancelFutureReservation.setInt(1, rentalId);
+                        int success = cancelFutureReservation.executeUpdate();
 
-                    // Make sure the reservation was actually cancelled
-                    if (success == 1) {
-                        // Reservation cancelled successfully
-                        System.out.println("Rental reservation with id: " + rentalId + " cancelled successfully");
+                        // Make sure the reservation was actually cancelled
+                        if (success == 1) {
+                            // Reservation cancelled successfully
+                            System.out.println("Rental reservation with id: " + rentalId + " cancelled successfully");
+                        } else {
+                            // Reservation not cancelled
+                            throw new SQLException("Unable to cancel rental reservation with id: " + rentalId);
+                        }
                     } else {
-                        // Reservation not cancelled
-                        throw new SQLException("Unable to cancel rental reservation with id: " + rentalId);
+                        // Rental ID is 0, exit
+                        restart = false;
                     }
                 }
-            }
 
-            connection.commit();
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-            ConnectionManager.rollbackConnection(connection);
-        } finally {
-            ConnectionManager.closeConnection(connection);
-            ConnectionManager.closePreparedStatement(getFutureReservations);
-            ConnectionManager.closePreparedStatement(cancelFutureReservation);
-        }
+                connection.commit();
+            }  catch (SQLException e) {
+                // Handle database deadlock or query timeout situations
+                if (e.getErrorCode() == MysqlErrorNumbers.ER_LOCK_DEADLOCK) {
+                    System.out.println("Deadlock on table - restarting menu option\n");
+                    restart = true;
+                } else if ("Statement cancelled due to timeout or client request".equals(e.getMessage())) {
+                    System.out.println("Query timed out, possibly due to deadlock - restarting menu option\n");
+                    restart = true;
+                } else {
+                    System.out.println(e.getMessage());
+                }
+
+                ConnectionManager.rollbackConnection(connection);
+            } catch (Exception e) {
+                restart = false;
+                System.out.println(e.getMessage());
+                ConnectionManager.rollbackConnection(connection);
+            } finally {
+                ConnectionManager.closeConnection(connection);
+                ConnectionManager.closePreparedStatement(getFutureReservations);
+                ConnectionManager.closePreparedStatement(cancelFutureReservation);
+            }
+            // Loop until not set to restart or number of tries has been exhausted
+        } while (restart && --numTries > 0);
+        if (numTries == 0) System.out.println("Maximum tries reached - exiting menu option");
     }
 }
