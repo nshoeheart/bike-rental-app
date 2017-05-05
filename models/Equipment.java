@@ -81,7 +81,7 @@ public class Equipment {
         }
     }
 
-    public static Equipment createFromResultSetRow(ResultSet resultSet) throws SQLException {
+    private static Equipment createFromResultSetRow(ResultSet resultSet) throws SQLException {
         int id = resultSet.getInt("id");
         String brand = resultSet.getString("brand");
         String name = resultSet.getString("name");

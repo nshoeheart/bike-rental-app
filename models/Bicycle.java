@@ -127,7 +127,7 @@ public class Bicycle {
      * @return a Bicycle object from the current row in the ResultSet
      * @throws SQLException if there was an error converting the current row in the ResultSet to a Bicycle
      */
-    public static Bicycle createFromResultSetRow(ResultSet resultSet) throws SQLException {
+    private static Bicycle createFromResultSetRow(ResultSet resultSet) throws SQLException {
         int id = resultSet.getInt("id");
         String make = resultSet.getString("make");
         String model = resultSet.getString("model");

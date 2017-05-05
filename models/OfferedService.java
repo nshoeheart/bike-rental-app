@@ -75,7 +75,7 @@ public class OfferedService {
         }
     }
 
-    public static OfferedService createFromResultSetRow(ResultSet resultSet) throws SQLException {
+    private static OfferedService createFromResultSetRow(ResultSet resultSet) throws SQLException {
         int id = resultSet.getInt("id");
         String name = resultSet.getString("name");
         float cost = resultSet.getFloat("cost");

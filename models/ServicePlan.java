@@ -1,5 +1,7 @@
 package models;
 
+import util.ConnectionManager;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,16 +56,20 @@ public class ServicePlan {
     }
 
     public static List<ServicePlan> createListFromResultSet(ResultSet resultSet) throws SQLException {
-        List<ServicePlan> servicePlans = new ArrayList<>();
+        try {
+            List<ServicePlan> servicePlans = new ArrayList<>();
 
-        while (resultSet.next()) {
-            servicePlans.add(createFromResultSetRow(resultSet));
+            while (resultSet.next()) {
+                servicePlans.add(createFromResultSetRow(resultSet));
+            }
+
+            return servicePlans;
+        } finally {
+            ConnectionManager.closeResultSet(resultSet);
         }
-
-        return servicePlans;
     }
 
-    public static ServicePlan createFromResultSetRow(ResultSet resultSet) throws SQLException {
+    private static ServicePlan createFromResultSetRow(ResultSet resultSet) throws SQLException {
         int bikeConditionId = resultSet.getInt("bike_condition_id");
         int offeredServiceId = resultSet.getInt("offered_service_id");
 

@@ -75,7 +75,7 @@ public class Customer {
         }
     }
 
-    public static Customer createFromResultSetRow(ResultSet resultSet) throws SQLException {
+    private static Customer createFromResultSetRow(ResultSet resultSet) throws SQLException {
         int id = resultSet.getInt("id");
         String lastName = resultSet.getString("last_name");
         String firstName = resultSet.getString("first_name");

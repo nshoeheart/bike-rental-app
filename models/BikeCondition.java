@@ -72,7 +72,7 @@ public class BikeCondition {
         }
     }
 
-    public static BikeCondition createFromResultSetRow(ResultSet resultSet) throws SQLException {
+    private static BikeCondition createFromResultSetRow(ResultSet resultSet) throws SQLException {
         int id = resultSet.getInt("id");
         String name = resultSet.getString("name");
 

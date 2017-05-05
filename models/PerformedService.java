@@ -86,7 +86,7 @@ public class PerformedService {
         }
     }
 
-    public static PerformedService createFromResultSetRow(ResultSet resultSet) throws SQLException {
+    private static PerformedService createFromResultSetRow(ResultSet resultSet) throws SQLException {
         int id = resultSet.getInt("id");
         int offeredServiceId = resultSet.getInt("offered_service_id");
         int bikeId = resultSet.getInt("bike_id");
