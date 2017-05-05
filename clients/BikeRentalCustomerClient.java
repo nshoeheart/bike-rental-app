@@ -167,6 +167,8 @@ public class BikeRentalCustomerClient {
             	}
             	// If successful, commit transaction (otherwise should not reach this point)
             	connection.commit();
+            }else {
+            	System.out.println("Exiting Rental Process...");
             }
         } catch (SQLException e) {
             ConnectionManager.rollbackConnection(connection);
