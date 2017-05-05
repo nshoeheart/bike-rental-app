@@ -37,11 +37,10 @@ public class BikeRentalCustomerClient {
         Scanner scanner = null;
 
         try {
+            scanner = new Scanner(System.in);
             int command = 1;
 
             while (command != EXIT) {
-                scanner = new Scanner(System.in);
-
                 // Menu for commands, customer must enter 0 to exit app
                 System.out.print("Customer command menu:\n" +
                         "  0. Logout\n" +
@@ -52,7 +51,6 @@ public class BikeRentalCustomerClient {
                 // Get command from user
                 System.out.print("Command number: ");
                 command = Integer.parseInt(scanner.nextLine());
-                scanner.close();
 
                 if (command == EXIT) {
                     // Logs out and ends application
@@ -64,11 +62,11 @@ public class BikeRentalCustomerClient {
 
                 } else if (command == MAKE_RESERVATION) {
 
-                    makeRentalReservation(customer.id);
+                    makeRentalReservation(customer.id, scanner);
 
                 } else if (command == LIST_FUTURE_RESERVATIONS) {
 
-                    listFutureReservations(customer.id);
+                    listFutureReservations(customer.id, scanner);
 
                 } else {
                     System.out.println("Not a valid menu command");
@@ -114,15 +112,15 @@ public class BikeRentalCustomerClient {
     }
 
     // Allows user to make a reservation for a bike rental
-    private static void makeRentalReservation(int customerId) {
+    private static void makeRentalReservation(int customerId, Scanner scanner) {
         Connection connection = null;
         PreparedStatement getAvailableBikes = null;
         PreparedStatement reserveBikeRental = null;
-        Scanner scanner = null;
+        //Scanner scanner = null;
 
         try {
             connection = ConnectionManager.getConnection();
-            scanner = new Scanner(System.in);
+            //scanner = new Scanner(System.in);
 
             // Get rental checkout date
             System.out.print("Enter the date you wish to rent the bike (format like YYYY-MM-DD, including the hyphens): ");
@@ -183,20 +181,20 @@ public class BikeRentalCustomerClient {
             ConnectionManager.closeConnection(connection);
             ConnectionManager.closePreparedStatement(getAvailableBikes);
             ConnectionManager.closePreparedStatement(reserveBikeRental);
-            if (scanner != null) scanner.close();
+            //if (scanner != null) scanner.close();
         }
     }
 
     // Shows a user their future rental reservations and allow user to cancel one if they choose
-    private static void listFutureReservations(int customerId) {
-        Scanner scanner = null;
+    private static void listFutureReservations(int customerId, Scanner scanner) {
+        //Scanner scanner = null;
         Connection connection = null;
         PreparedStatement getFutureReservations = null;
         PreparedStatement cancelFutureReservation = null;
 
         try {
             connection = ConnectionManager.getConnection();
-            scanner = new Scanner(System.in);
+            //scanner = new Scanner(System.in);
 
             // Get a list of future rental reservations for this customer
             getFutureReservations = connection.prepareStatement("SELECT * FROM Rental r WHERE r.customer_id = ? AND r.checkout_date > ?");
@@ -241,7 +239,7 @@ public class BikeRentalCustomerClient {
             ConnectionManager.closeConnection(connection);
             ConnectionManager.closePreparedStatement(getFutureReservations);
             ConnectionManager.closePreparedStatement(cancelFutureReservation);
-            if (scanner != null) scanner.close();
+            //if (scanner != null) scanner.close();
         }
     }
 }

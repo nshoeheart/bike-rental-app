@@ -22,8 +22,7 @@ public class BikeRentalManagerClient {
     private static final int VIEW_CONDITIONS = 4;       // Query E
     private static final int RECORD_SERVICE = 5;        // Transaction E
 
-    public BikeRentalManagerClient() {
-    }
+    public BikeRentalManagerClient(){}
 
     public void run() {
         Scanner scanner = null;
@@ -56,11 +55,11 @@ public class BikeRentalManagerClient {
 
                 } else if (command == PROCESS_CHECKOUT) {
 
-                    processRentalCheckout();
+                    processRentalCheckout(scanner);
 
                 } else if (command == PROCESS_RETURN) {
 
-                    processRentalReturn();
+                    processRentalReturn(scanner);
 
                 } else if (command == VIEW_CONDITIONS) {
 
@@ -68,7 +67,7 @@ public class BikeRentalManagerClient {
 
                 } else if (command == RECORD_SERVICE) {
 
-                    recordBikeService();
+                    recordBikeService(scanner);
                 } else {
                     System.out.println("Not a valid menu command");
                 }
@@ -81,7 +80,7 @@ public class BikeRentalManagerClient {
         }
     }
 
-    // Allows manager to see all bicycles that are currently rented out (query a)
+    // Allows manager to see all bicycles that are currently rented out
     private void viewRentedBikes() {
         Connection connection = null;
         PreparedStatement getRentedBikes = null;
@@ -112,19 +111,17 @@ public class BikeRentalManagerClient {
     }
 
 
-    // Allows a manager to checkout a bike to a customer given that today is the day of reservation (transaction a)
-    private void processRentalCheckout() {
+    // Allows a manager to checkout a bike to a customer given that today is the day of reservation
+    private void processRentalCheckout(Scanner scanner) {
         Connection connection = null;
         PreparedStatement getRentalsToCheckout = null;
         PreparedStatement checkoutRental = null;
-        Scanner scanner = null;
 
         try {
             connection = ConnectionManager.getConnection();
-            scanner = new Scanner(System.in);
 
             // Get a list of rentals that can be checked out (not yet checked out and today is the first day of reservation)
-            getRentalsToCheckout = connection.prepareStatement("SELECT * FROM RENTAL r WHERE r.checked_out = FALSE AND r.checkout_date = ?");
+            getRentalsToCheckout = connection.prepareStatement("SELECT * FROM Rental r WHERE r.checked_out = FALSE AND r.checkout_date = ?");
             getRentalsToCheckout.setDate(1, Date.valueOf(LocalDate.now()));
             List<Rental> rentalsToCheckout = Rental.createListFromResultSet(getRentalsToCheckout.executeQuery());
 
@@ -166,22 +163,19 @@ public class BikeRentalManagerClient {
             ConnectionManager.closePreparedStatement(getRentalsToCheckout);
             ConnectionManager.closePreparedStatement(checkoutRental);
             ConnectionManager.closeConnection(connection);
-            if (scanner != null) scanner.close();
         }
     }
 
 
-    // Allows manager to process a return, assuming he knows the rental id that is to be returned
-    private void processRentalReturn() {
+    // Allows manager to process a rental return
+    private void processRentalReturn(Scanner scanner) {
         Connection connection = null;
         PreparedStatement getCheckedOutRentals = null;
         PreparedStatement processRentalReturn = null;
         PreparedStatement getReturnedRental = null;
-        Scanner scanner = null;
 
         try {
             connection = ConnectionManager.getConnection();
-            scanner = new Scanner(System.in);
 
             // Get a list of rentals that are currently checked out
             getCheckedOutRentals = connection.prepareStatement("SELECT * FROM Rental r WHERE r.checked_out = TRUE AND r.return_date IS NULL");
@@ -256,7 +250,6 @@ public class BikeRentalManagerClient {
             ConnectionManager.closePreparedStatement(getCheckedOutRentals);
             ConnectionManager.closePreparedStatement(processRentalReturn);
             ConnectionManager.closePreparedStatement(getReturnedRental);
-            if (scanner != null) scanner.close();
         }
     }
 
@@ -301,16 +294,14 @@ public class BikeRentalManagerClient {
     }
 
     // Performs selected service on selected bike on today's date
-    private void recordBikeService() {
+    private void recordBikeService(Scanner scanner) {
         Connection connection = null;
         PreparedStatement getBicycles = null;
         PreparedStatement getOfferedServices = null;
         PreparedStatement recordService = null;
-        Scanner scanner = null;
 
         try {
             connection = ConnectionManager.getConnection();
-            scanner = new Scanner(System.in);
 
             // Get a list of all bicycles in the shop
             getBicycles = connection.prepareStatement("SELECT * FROM Bicycle b");
@@ -377,7 +368,6 @@ public class BikeRentalManagerClient {
             ConnectionManager.closePreparedStatement(getOfferedServices);
             ConnectionManager.closePreparedStatement(recordService);
             ConnectionManager.closeConnection(connection);
-            if (scanner != null) scanner.close();
         }
     }
 }
