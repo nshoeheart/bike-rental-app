@@ -16,11 +16,11 @@ import java.util.Scanner;
 public class BikeRentalManagerClient {
 
     private static final int EXIT = 0;
-    private static final int VIEW_CURRENT_RENTS = 1; // Scenario covers query a
-    private static final int PROCESS_CHECKOUT = 2; // Scenario covers transaction a
-    private static final int PROCESS_RETURN = 3; // Scenario covers transaction b
-    private static final int VIEW_CONDITIONS = 4; // Scenario covers query e
-    private static final int RECORD_SERVICE = 5; // Scenario covers transaction e
+    private static final int VIEW_CURRENT_RENTS = 1;    // Query A
+    private static final int PROCESS_CHECKOUT = 2;      // Transaction A
+    private static final int PROCESS_RETURN = 3;        // Transaction B and Query C
+    private static final int VIEW_CONDITIONS = 4;       // Query E
+    private static final int RECORD_SERVICE = 5;        // Transaction E
 
     public BikeRentalManagerClient() {
     }
@@ -30,16 +30,20 @@ public class BikeRentalManagerClient {
 
         try {
             scanner = new Scanner(System.in);
-
             int command = 1;
 
             while (command != 0) {
 
-                //Menu for commands, manager must enter 0 to exit app
-                System.out.print("Please enter the number of the command you wish to do:\n  0. Logout\n  1. View All Current Rentals\n  "
-                        + "2. Process Rental Checkout\n  3. Process Rental Return\n  4. View Bike Conditions and Required Services\n  5. Record Service\n");
+                // Menu for commands, manager must enter 0 to exit app
+                System.out.print("Please enter the number of the command you wish to do:\n" +
+                        "  0. Logout\n" +
+                        "  1. View All Current Rentals\n" +
+                        "  2. Process Rental Checkout\n" +
+                        "  3. Process Rental Return\n" +
+                        "  4. View Bike Conditions and Required Services\n" +
+                        "  5. Record Service\n");
 
-
+                // Get command from user
                 command = Integer.parseInt(scanner.nextLine());
 
                 if (command == EXIT) {
@@ -65,6 +69,8 @@ public class BikeRentalManagerClient {
                 } else if (command == RECORD_SERVICE) {
 
                     recordBikeService();
+                } else {
+                    System.out.println("Not a valid menu command");
                 }
 
                 System.out.println();
@@ -100,6 +106,7 @@ public class BikeRentalManagerClient {
             // If successful, commit transaction (otherwise should not reach this point)
             connection.commit();
         } catch (SQLException e) {
+            System.out.println(e.getMessage());
             ConnectionManager.rollbackConnection(connection);
         } finally {
             ConnectionManager.closePreparedStatement(getRentedBikes);
@@ -290,6 +297,7 @@ public class BikeRentalManagerClient {
             // If successful, commit transaction (otherwise should not reach this point)
             connection.commit();
         } catch (SQLException e) {
+            System.out.println(e.getMessage());
             ConnectionManager.rollbackConnection(connection);
         } finally {
             ConnectionManager.closeConnection(connection);

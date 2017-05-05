@@ -20,11 +20,9 @@ public class BikeRentalCustomerClient {
     private Customer customer;
 
     private static final int EXIT = 0;
-    private static final int RESERVE_A_BIKE = 1; // Scenario covers query b and transaction c
-    private static final int VIEW_CUST_RENTALS = 2; // Scenario covers query a and d
-    private static final int CANCEL_RESERVATION = 3; // Scenario covers transaction d
-    private static final int MAKE_RETURN = 4; // Scenario covers transaction b
-    private static final int VIEW_CURRENT_AVAIL_BIKES = 5;
+    private static final int VIEW_CURRENT_AVAIL_BIKES = 1;  // Query B
+    private static final int MAKE_RESERVATION = 2;          // Transaction C
+    private static final int LIST_FUTURE_RESERVATIONS = 3;  // Query D and Transaction D
 
     public BikeRentalCustomerClient(Customer customer) {
         this.customer = customer;
@@ -37,76 +35,77 @@ public class BikeRentalCustomerClient {
     }
 
     public void run() {
-        Scanner scanner = new Scanner(System.in);
+        Scanner scanner = null;
 
-        // User input command, checked each loop
-        int command = 1;
+        try {
+            scanner = new Scanner(System.in);
+            int command = 1;
 
-        while (command != EXIT) {
+            while (command != EXIT) {
 
-            //Menu for commands, customer must enter 0 to exit app
-            System.out.print("Please enter the number of the command you wish to do:\n  0. Logout\n  1. Rent Bike\n  "
-                    + "2. View Your Rentals\n  3. Cancel a Reservation\n  4. Make a Return\n ");
+                // Menu for commands, customer must enter 0 to exit app
+                System.out.print("Please enter the number of the command you wish to do:\n" +
+                        "  0. Logout\n" +
+                        "  1. View Currently Available Bikes\n" +
+                        "  2. View Your Future Reservations\n" +
+                        "  3. Make a Rental Reservation\n" +
+                        "  4. Cancel a Future Reservation\n ");
 
-            //Check user input
-            command = Integer.parseInt(scanner.nextLine());
-
-                
-                /*
-                 * Exit case
-                 */
-
-            if (command == EXIT) {
-                // Logs out and ends application
-                System.out.println("Logging out...");
-                    
-                /* 
-                 * View bikes available to Rent  
-                 * Covers query b and transaction c
-                 */
-            } else if (command == RESERVE_A_BIKE) {
-                menuOption1(customer.id);
-                    
-                /*
-                 *  View user's rentals
-                 *  Covers query a and d
-                 */
-            } else if (command == VIEW_CUST_RENTALS) {
-
-                menuOption2(customer.id);
-                    
-                /*
-                 *  Cancel a reservation before the check out date 
-                 *  Covers transaction d 
-                 */
-
-            } else if (command == CANCEL_RESERVATION) {
-
-                menuOption3(customer.id);
-                
-                /*
-                 *  Make a return on a bike user currently has outstanding	
-                 */
-            } else if (command == MAKE_RETURN) {
-
-                menuOption4(customer.id);
-
-            } else {
-                System.out.println("Not a valid menu command. Please re-enter command option: ");
+                // Get command from user
                 command = Integer.parseInt(scanner.nextLine());
+
+                if (command == EXIT) {
+                    // Logs out and ends application
+                    System.out.println("Logging out...");
+
+                } else if (command == VIEW_CURRENT_AVAIL_BIKES) {
+
+                    viewCurrentlyAvailableBikes(customer.id);
+
+                } else if (command == MAKE_RESERVATION) {
+
+                    makeRentalReservation(customer.id);
+
+                } else if (command == LIST_FUTURE_RESERVATIONS) {
+
+                    menuOption3(customer.id);
+
+                } else {
+                    System.out.println("Not a valid menu command");
+                }
             }
+        } finally {
+            if (scanner != null) scanner.close();
         }
     }
 
-
-    // Allows user to see bikes available for rent
-    private static void menuOption1(int customer_id) {
+    // Shows bikes that are currently available for rent
+    private static void viewCurrentlyAvailableBikes(int customerId) {
         Connection connection = null;
-        PreparedStatement getAvailableBikes = null;
+        PreparedStatement getCurrentlyAvailableBikes = null;
 
         try {
             connection = ConnectionManager.getConnection();
-            Scanner scanner = new Scanner(System.in);
+
+            //todo insert code here
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            ConnectionManager.rollbackConnection(connection);
+        } finally {
+            ConnectionManager.closeConnection(connection);
+            ConnectionManager.closePreparedStatement(getCurrentlyAvailableBikes);
+        }
+    }
+
+    // Allows user to make a reservation for a bike rental
+    private static void makeRentalReservation(int customerId) {
+        Connection connection = null;
+        PreparedStatement getAvailableBikes = null;
+        Scanner scanner = null;
+
+        try {
+            connection = ConnectionManager.getConnection();
+            scanner = new Scanner(System.in);
 
             // Get rental checkout date
             System.out.print("Enter the date you wish to rent the bike (format like YYYY-MM-DD, including the hyphens): ");
@@ -145,7 +144,7 @@ public class BikeRentalCustomerClient {
                     getBike.setInt(1, bikeSelection);
                     Rental referenceRental = Rental.createFromResultSetRow(getBike.executeQuery(), true);
                     // Sets parameters of insertion accordingly, then executes
-                    Rental.createNewRental(connection, referenceRental.bikeId, customer_id, checkoutDate, dueDate, null, checkoutToday);
+                    Rental.createNewRental(connection, referenceRental.bikeId, customerId, checkoutDate, dueDate, null, checkoutToday);
                 } catch (Exception e) {
                     System.out.print("Failed to rent the requested bike.");
 
@@ -155,11 +154,34 @@ public class BikeRentalCustomerClient {
             } else {
                 System.out.println("Exiting Rental Process...");
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
             ConnectionManager.rollbackConnection(connection);
         } finally {
             ConnectionManager.closeConnection(connection);
             ConnectionManager.closePreparedStatement(getAvailableBikes);
+            if (scanner != null) scanner.close();
+        }
+    }
+
+    // Shows a user their future rental reservations and allow user to cancel one if they choose
+    private static void listFutureReservations(int customerId) {
+        Scanner scanner = null;
+        Connection connection = null;
+        PreparedStatement getCurrentlyAvailableBikes = null;
+
+        try {
+            connection = ConnectionManager.getConnection();
+            scanner = new Scanner(System.in);
+
+            //todo insert code here
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            ConnectionManager.rollbackConnection(connection);
+        } finally {
+            ConnectionManager.closeConnection(connection);
+            ConnectionManager.closePreparedStatement(getCurrentlyAvailableBikes);
+            if (scanner != null) scanner.close();
         }
     }
 
@@ -203,7 +225,7 @@ public class BikeRentalCustomerClient {
 
 
     // Allows user to cancel one of their reservations if it is before the checkout date
-    private static void menuOption3(int customer_id) {
+    private static void menuOption3(int customerId) {
         Connection connection = null;
 
         try {
@@ -214,7 +236,7 @@ public class BikeRentalCustomerClient {
 
             // Retrieves customer rentals beyond current date
             PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Rental r WHERE r.customer_id = ? AND r.checkout_date <= ? AND r.checked_out = true");
-            preparedStatement.setInt(1, customer_id);
+            preparedStatement.setInt(1, customerId);
             preparedStatement.setDate(2, Date.valueOf(LocalDate.now()));
             List<Rental> customerRentals = Rental.createListFromResultSet(preparedStatement.executeQuery());
 
@@ -244,8 +266,8 @@ public class BikeRentalCustomerClient {
         }
     }
 
-    // Allows user to return a bike they have outstanding and get a refund if returned before due date
-    private static void menuOption4(int customer_id) {
+    // Show a user's future
+    private static void menuOption4(int customerId) {
         Connection connection = null;
 
         try {
@@ -256,7 +278,7 @@ public class BikeRentalCustomerClient {
 
             // Queries up outstanding rentals for user and puts them in a list
             PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Rental r where r.customer_id = ? AND r.checked_out = true AND r.return_date IS NULL");
-            preparedStatement.setInt(1, customer_id);
+            preparedStatement.setInt(1, customerId);
             List<Rental> outstandingRentals = Rental.createListFromResultSet(preparedStatement.executeQuery());
 
             System.out.println("Please select from the following outstanding rentals to return by typing the id number associated with the rental you wish to return.");
