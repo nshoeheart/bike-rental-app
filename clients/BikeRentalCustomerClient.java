@@ -131,40 +131,43 @@ public class BikeRentalCustomerClient {
 
             rent = Integer.parseInt(scanner.nextLine());
 
-            // Gets more info regarding the rental
-            System.out.println("Enter the date you wish to rent the bike (format like YYYY-MM-DD, including the hyphens.)");
-            String in = scanner.nextLine();
-            LocalDate checkout = LocalDate.parse(in);
+            if(rent != 0){
+            	
+            	// Gets more info regarding the rental
+            	System.out.println("Enter the date you wish to rent the bike (format like YYYY-MM-DD, including the hyphens.)");
+            	String in = scanner.nextLine();
+            	LocalDate checkout = LocalDate.parse(in);
 
 
-            // Boolean to check if customer will rent bike today, (this will be the checked_out field in Rental)
-            Boolean bool = false;
-            if (checkout == LocalDate.now()) {
-                bool = true;
+            	// Boolean to check if customer will rent bike today, (this will be the checked_out field in Rental)
+            	Boolean bool = false;
+            	if (checkout == LocalDate.now()) {
+            		bool = true;
+            	}
+
+            	System.out.println("How many days would you like to rent it?");
+            	int length = Integer.parseInt(scanner.nextLine());
+
+            	// Process for establishing rental dates
+            	LocalDate due = checkout.plusDays(length);
+
+            	if (rent != 0) { //Case where bike is rented, then we need to update the rental table
+            		try {
+            			// If bike is rented, attempt to update it in database to have rented status
+            			PreparedStatement getBike = connection.prepareStatement("SELECT * FROM Rental r WHERE r.id = ?");
+            			getBike.setInt(1, rent);
+            			Rental referenceRental = Rental.createFromResultSetRow(getBike.executeQuery());
+            			// Sets parameters of insertion accordingly, then executes
+            			Rental rentBike = Rental.createNewRental(connection, referenceRental.bikeId, customer_id, checkout, due, null, bool);
+
+            		} catch (Exception e) {
+            			System.out.print("Failed to rent the requested bike.");
+
+            		}
+            	}
+            	// If successful, commit transaction (otherwise should not reach this point)
+            	connection.commit();
             }
-
-            System.out.println("How many days would you like to rent it?");
-            int length = Integer.parseInt(scanner.nextLine());
-
-            // Process for establishing rental dates
-            LocalDate due = checkout.plusDays(length);
-
-            if (rent != 0) { //Case where bike is rented, then we need to update the rental table
-                try {
-                    // If bike is rented, attempt to update it in database to have rented status
-                    PreparedStatement getBike = connection.prepareStatement("SELECT * FROM Rental r WHERE r.id = ?");
-                    getBike.setInt(1, rent);
-                    Rental referenceRental = Rental.createFromResultSetRow(getBike.executeQuery());
-                    // Sets parameters of insertion accordingly, then executes
-                    Rental rentBike = Rental.createNewRental(connection, referenceRental.bikeId, customer_id, checkout, due, null, bool);
-
-                } catch (Exception e) {
-                    System.out.print("Failed to rent the requested bike.");
-
-                }
-            }
-            // If successful, commit transaction (otherwise should not reach this point)
-            connection.commit();
         } catch (SQLException e) {
             ConnectionManager.rollbackConnection(connection);
         } finally {
