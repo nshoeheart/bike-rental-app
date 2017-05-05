@@ -71,7 +71,7 @@ public class Rental {
             resultSet = preparedStatement.executeQuery();
 
             if (resultSet.next()) {
-                return createFromResultSetRow(resultSet);
+                return createFromResultSetRow(resultSet, false);
             } else {
                 throw new SQLException("Rental with id: " + id + " not found");
             }
@@ -86,7 +86,7 @@ public class Rental {
             List<Rental> rentals = new ArrayList<>();
 
             while (resultSet.next()) {
-                rentals.add(createFromResultSetRow(resultSet));
+                rentals.add(createFromResultSetRow(resultSet, false));
             }
 
             return rentals;
@@ -95,22 +95,26 @@ public class Rental {
         }
     }
 
-    public static Rental createFromResultSetRow(ResultSet resultSet) throws SQLException {
-        int id = resultSet.getInt("id");
-        int bikeId = resultSet.getInt("bike_id");
-        int customerId = resultSet.getInt("customer_id");
-        LocalDate checkoutDate = Instant.ofEpochMilli(resultSet.getDate("checkout_date").getTime()).atZone(ZoneId.systemDefault()).toLocalDate(); // convert from Date to LocalDate
-        LocalDate dueDate = Instant.ofEpochMilli(resultSet.getDate("due_date").getTime()).atZone(ZoneId.systemDefault()).toLocalDate(); // convert from Date to LocalDate
-        LocalDate returnDate;
-
+    public static Rental createFromResultSetRow(ResultSet resultSet, boolean closeResultSet) throws SQLException {
         try {
-            Date returnDateSql = resultSet.getDate("return_date");
-            returnDate = (returnDateSql == null ? null : Instant.ofEpochMilli(returnDateSql.getTime()).atZone(ZoneId.systemDefault()).toLocalDate()); // convert from Date to LocalDate
-        } catch (SQLException e) {
-            returnDate = null;
-        }
-        boolean checkedOut = resultSet.getBoolean("checked_out");
+            int id = resultSet.getInt("id");
+            int bikeId = resultSet.getInt("bike_id");
+            int customerId = resultSet.getInt("customer_id");
+            LocalDate checkoutDate = Instant.ofEpochMilli(resultSet.getDate("checkout_date").getTime()).atZone(ZoneId.systemDefault()).toLocalDate(); // convert from Date to LocalDate
+            LocalDate dueDate = Instant.ofEpochMilli(resultSet.getDate("due_date").getTime()).atZone(ZoneId.systemDefault()).toLocalDate(); // convert from Date to LocalDate
+            LocalDate returnDate;
 
-        return new Rental(id, bikeId, customerId, checkoutDate, dueDate, returnDate, checkedOut);
+            try {
+                Date returnDateSql = resultSet.getDate("return_date");
+                returnDate = (returnDateSql == null ? null : Instant.ofEpochMilli(returnDateSql.getTime()).atZone(ZoneId.systemDefault()).toLocalDate()); // convert from Date to LocalDate
+            } catch (SQLException e) {
+                returnDate = null;
+            }
+            boolean checkedOut = resultSet.getBoolean("checked_out");
+
+            return new Rental(id, bikeId, customerId, checkoutDate, dueDate, returnDate, checkedOut);
+        } finally {
+            if (closeResultSet) ConnectionManager.closeResultSet(resultSet);
+        }
     }
 }

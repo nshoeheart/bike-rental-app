@@ -136,4 +136,11 @@ public class Bicycle {
 
         return new Bicycle(id, make, model, costPerDay, bikeConditionId);
     }
+
+    public static void printBikeDetails(Connection connection, List<Bicycle> bicycles) throws SQLException {
+        System.out.println("ID\tMake\t\tModel\t\tCost/Day\t\tCondition");
+        for (Bicycle bike : bicycles) {
+            System.out.println(String.format("%s\t%s\t\t%s\t\t%s\t\t%s", bike.id, bike.make, bike.model, bike.costPerDay, bike.getBikeCondition(connection).name));
+        }
+    }
 }

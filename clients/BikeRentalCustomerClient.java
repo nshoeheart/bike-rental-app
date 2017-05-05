@@ -20,10 +20,11 @@ public class BikeRentalCustomerClient {
     private Customer customer;
 
     private static final int EXIT = 0;
-    private static final int GET_AVAIL_BIKES = 1; // Scenario covers query b and transaction c
+    private static final int RESERVE_A_BIKE = 1; // Scenario covers query b and transaction c
     private static final int VIEW_CUST_RENTALS = 2; // Scenario covers query a and d
     private static final int CANCEL_RESERVATION = 3; // Scenario covers transaction d
     private static final int MAKE_RETURN = 4; // Scenario covers transaction b
+    private static final int VIEW_CURRENT_AVAIL_BIKES = 5;
 
     public BikeRentalCustomerClient(Customer customer) {
         this.customer = customer;
@@ -61,19 +62,15 @@ public class BikeRentalCustomerClient {
                     
                 /* 
                  * View bikes available to Rent  
-                 * Covers query b and transaction c 
-                 *   
+                 * Covers query b and transaction c
                  */
-
-            } else if (command == GET_AVAIL_BIKES) {
+            } else if (command == RESERVE_A_BIKE) {
                 menuOption1(customer.id);
                     
                 /*
                  *  View user's rentals
                  *  Covers query a and d
-                 *  
                  */
-
             } else if (command == VIEW_CUST_RENTALS) {
 
                 menuOption2(customer.id);
@@ -105,75 +102,64 @@ public class BikeRentalCustomerClient {
     // Allows user to see bikes available for rent
     private static void menuOption1(int customer_id) {
         Connection connection = null;
+        PreparedStatement getAvailableBikes = null;
 
         try {
             connection = ConnectionManager.getConnection();
-
-            //todo insert code for this menu option
-
             Scanner scanner = new Scanner(System.in);
 
-            //Links to Rental table and returns all bikes that can be rented out
-            int rent = 1;
+            // Get rental checkout date
+            System.out.print("Enter the date you wish to rent the bike (format like YYYY-MM-DD, including the hyphens): ");
+            String in = scanner.nextLine();
+            LocalDate checkoutDate = LocalDate.parse(in);
+
+            // Boolean to check if customer will rent bike today, (this will be the checked_out field in Rental)
+            boolean checkoutToday = checkoutDate.equals(LocalDate.now());
+
+            // Get rental due date
+            System.out.println("How many days would you like to rent it?");
+            int length = Integer.parseInt(scanner.nextLine());
+            LocalDate dueDate = checkoutDate.plusDays(length);
 
             // Allows user to query to DB based on commands they select
-            Statement statement1 = connection.createStatement();
-            ResultSet result1 = statement1.executeQuery("SELECT * FROM Rental r WHERE r.checked_out = false AND NOT r.return_date IS NULL"); // Returns in result all bikes on rental table available for rental
-            System.out.print("Please select one of the following bikes to rent by entering the id associated with the bike; "
-                    + "\n type '0' to go back to main menu:\n");
+            //getAvailableBikes = connection.prepareStatement("SELECT * FROM Rental r WHERE r.checked_out = false AND NOT r.return_date IS NULL");
+            getAvailableBikes = connection.prepareStatement("SELECT * FROM Rental r WHERE r.");
+            List<Bicycle> availableBikes = Bicycle.createListFromResultSet(getAvailableBikes.executeQuery());
 
-            List<Bicycle> availableBikes = Bicycle.createListFromResultSet(result1);
+            System.out.println("Please select one of the following bikes to rent by entering the id associated with the bike; "
+                    + "\n type '0' to go back to main menu:");
 
             // Prints each result from Rental table that are available for customer to rent
-            for (int i = 0; i < availableBikes.size(); i++) {
-                System.out.println(availableBikes.get(i).toString()); // bike data
+            System.out.println("ID\tMake\t\tModel\t\tCost/Day\t\tCondition");
+            for (Bicycle bike : availableBikes) {
+                System.out.println(String.format("%s\t%s\t\t%s\t\t%s\t\t%s", bike.id, bike.make, bike.model, bike.costPerDay, bike.getBikeCondition(connection).name));
             }
 
-            rent = Integer.parseInt(scanner.nextLine());
+            System.out.print("Bike ID: ");
+            int bikeSelection = Integer.parseInt(scanner.nextLine());
 
-            if(rent != 0){
-            	
-            	// Gets more info regarding the rental
-            	System.out.println("Enter the date you wish to rent the bike (format like YYYY-MM-DD, including the hyphens.)");
-            	String in = scanner.nextLine();
-            	LocalDate checkout = LocalDate.parse(in);
+            if (bikeSelection != 0) {
+                try {
+                    // If bike is rented, attempt to update it in database to have rented status
+                    PreparedStatement getBike = connection.prepareStatement("SELECT * FROM Rental r WHERE r.id = ?");
+                    getBike.setInt(1, bikeSelection);
+                    Rental referenceRental = Rental.createFromResultSetRow(getBike.executeQuery(), true);
+                    // Sets parameters of insertion accordingly, then executes
+                    Rental.createNewRental(connection, referenceRental.bikeId, customer_id, checkoutDate, dueDate, null, checkoutToday);
+                } catch (Exception e) {
+                    System.out.print("Failed to rent the requested bike.");
 
-
-            	// Boolean to check if customer will rent bike today, (this will be the checked_out field in Rental)
-            	Boolean bool = false;
-            	if (checkout == LocalDate.now()) {
-            		bool = true;
-            	}
-
-            	System.out.println("How many days would you like to rent it?");
-            	int length = Integer.parseInt(scanner.nextLine());
-
-            	// Process for establishing rental dates
-            	LocalDate due = checkout.plusDays(length);
-
-            	if (rent != 0) { //Case where bike is rented, then we need to update the rental table
-            		try {
-            			// If bike is rented, attempt to update it in database to have rented status
-            			PreparedStatement getBike = connection.prepareStatement("SELECT * FROM Rental r WHERE r.id = ?");
-            			getBike.setInt(1, rent);
-            			Rental referenceRental = Rental.createFromResultSetRow(getBike.executeQuery());
-            			// Sets parameters of insertion accordingly, then executes
-            			Rental rentBike = Rental.createNewRental(connection, referenceRental.bikeId, customer_id, checkout, due, null, bool);
-
-            		} catch (Exception e) {
-            			System.out.print("Failed to rent the requested bike.");
-
-            		}
-            	}
-            	// If successful, commit transaction (otherwise should not reach this point)
-            	connection.commit();
-            }else {
-            	System.out.println("Exiting Rental Process...");
+                }
+                // If successful, commit transaction (otherwise should not reach this point)
+                connection.commit();
+            } else {
+                System.out.println("Exiting Rental Process...");
             }
         } catch (SQLException e) {
             ConnectionManager.rollbackConnection(connection);
         } finally {
             ConnectionManager.closeConnection(connection);
+            ConnectionManager.closePreparedStatement(getAvailableBikes);
         }
     }
 
@@ -194,10 +180,15 @@ public class BikeRentalCustomerClient {
             preparedStatement.setInt(1, customerId);
             List<Rental> customerRentals = Rental.createListFromResultSet(preparedStatement.executeQuery());
 
-            if (customerRentals.isEmpty()) System.out.println("Rentals list empty");
-            // Prints out customer's rentals
-            for (Rental rent : customerRentals){
-                System.out.println(rent.bikeId);
+            if (customerRentals.isEmpty()) {
+                System.out.println("Rentals list empty");
+            } else {
+                // Prints out customer's rentals
+                System.out.println("ID\tMake\t\tModel\t\tCost/Day\t\tCondition");
+                for (Rental rental : customerRentals) {
+                    Bicycle bike = rental.getBicycle(connection);
+                    System.out.println(String.format("%s\t%s\t\t%s\t\t%s\t\t%s", bike.id, bike.make, bike.model, bike.costPerDay, bike.getBikeCondition(connection).name));
+                }
             }
 
             // If successful, commit transaction (otherwise should not reach this point)
@@ -279,7 +270,7 @@ public class BikeRentalCustomerClient {
             PreparedStatement Return = connection.prepareStatement("UPDATE Rental r SET r.return_date = ? AND r.checked_out = false WHERE r.id = ?");
             Return.setDate(1, Date.valueOf(LocalDate.now()));
             Return.setInt(2, ret);
-            Rental returnedRental = Rental.createFromResultSetRow(Return.executeQuery());
+            Rental returnedRental = Rental.createFromResultSetRow(Return.executeQuery(), true);
             Return.executeQuery();
 
             // Attempt at processing a refund
