@@ -18,9 +18,9 @@ public class ConnectionManager {
         // NOTE: You must be connected to UIowa VPN for the connection to work (even if you are on campus internet)
         final String MYSQL_SERVER_ROUTE = "jdbc:mysql://dbdev.divms.uiowa.edu:3306/db_" + HW7B_DB_USER;
 
-        System.out.println("Attempting to connect to database...");
+        //System.out.println("Attempting to connect to database...");
         Connection connection = DriverManager.getConnection(MYSQL_SERVER_ROUTE, HW7B_DB_USER, HW7B_DB_PASS);
-        System.out.println("Connected to database successfully\n");
+        //System.out.println("Connected to database successfully\n");
 
         connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
         connection.setAutoCommit(false);
@@ -43,13 +43,13 @@ public class ConnectionManager {
 
     public static void closeConnection(Connection connection) {
         if (connection != null) {
-            System.out.println("Closing database connection...");
+            //System.out.println("Closing database connection...");
 
             try {
                 connection.close();
-                System.out.println("Database connection closed successfully\n");
+                //System.out.println("Database connection closed successfully\n");
             } catch (SQLException e) {
-                System.out.println("Failed to close connection\n");
+                //System.out.println("Failed to close connection\n");
             }
         }
     }

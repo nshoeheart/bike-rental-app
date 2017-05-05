@@ -50,6 +50,7 @@ public class BikeRentalApp {
                 new BikeRentalCustomerClient(customer).run();
             }
         } catch (Exception e) {
+            e.printStackTrace();
             System.out.println("Error: " + e.getMessage());
         }
     }

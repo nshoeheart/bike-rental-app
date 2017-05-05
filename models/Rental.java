@@ -87,7 +87,9 @@ public class Rental {
         int customerId = resultSet.getInt("customer_id");
         LocalDate checkoutDate = Instant.ofEpochMilli(resultSet.getDate("checkout_date").getTime()).atZone(ZoneId.systemDefault()).toLocalDate(); // convert from Date to LocalDate
         LocalDate dueDate = Instant.ofEpochMilli(resultSet.getDate("due_date").getTime()).atZone(ZoneId.systemDefault()).toLocalDate(); // convert from Date to LocalDate
-        LocalDate returnDate = Instant.ofEpochMilli(resultSet.getDate("return_date").getTime()).atZone(ZoneId.systemDefault()).toLocalDate(); // convert from Date to LocalDate
+        Date returnDateSql = resultSet.getDate("return_date");
+
+        LocalDate returnDate = (returnDateSql == null ? null : Instant.ofEpochMilli(returnDateSql.getTime()).atZone(ZoneId.systemDefault()).toLocalDate()); // convert from Date to LocalDate
         boolean checkedOut = resultSet.getBoolean("checked_out");
 
         return new Rental(id, bikeId, customerId, checkoutDate, dueDate, returnDate, checkedOut);

@@ -36,7 +36,6 @@ public class BikeRentalCustomerClient {
     }
 
     public void run() {
-        Connection connection = null;
         Scanner scanner = new Scanner(System.in);
 
         // User input command, checked each loop
@@ -175,7 +174,7 @@ public class BikeRentalCustomerClient {
 
 
     // Allows user to view their own outstanding rentals
-    private static void menuOption2(int customer_id) {
+    private static void menuOption2(int customerId) {
         Connection connection = null;
 
         try {
@@ -185,9 +184,9 @@ public class BikeRentalCustomerClient {
 
 
             // Retrieves customer rentals
+            System.out.println("Getting rentals");
             PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Rental r WHERE r.customer_id = ? AND r.return_date IS NULL");
-            preparedStatement.setInt(1, customer_id);
-            preparedStatement.setDate(2, Date.valueOf(LocalDate.now()));
+            preparedStatement.setInt(1, customerId);
             List<Rental> customerRentals = Rental.createListFromResultSet(preparedStatement.executeQuery());
 
             if (customerRentals.isEmpty()) System.out.println("Rentals list empty");
@@ -199,6 +198,7 @@ public class BikeRentalCustomerClient {
             // If successful, commit transaction (otherwise should not reach this point)
             connection.commit();
         } catch (SQLException e) {
+            e.printStackTrace();
             ConnectionManager.rollbackConnection(connection);
         } finally {
             ConnectionManager.closeConnection(connection);
