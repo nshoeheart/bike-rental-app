@@ -120,11 +120,9 @@ public class BikeRentalCustomerClient {
         Connection connection = null;
         PreparedStatement getAvailableBikes = null;
         PreparedStatement reserveBikeRental = null;
-        //Scanner scanner = null;
 
         try {
             connection = ConnectionManager.getConnection();
-            //scanner = new Scanner(System.in);
 
             // Get rental checkout date
             System.out.print("Enter the date you wish to rent the bike (format like YYYY-MM-DD, including the hyphens): ");
@@ -139,7 +137,7 @@ public class BikeRentalCustomerClient {
             // Find bikes that are available for the entirety of the desired date range
             getAvailableBikes = connection.prepareStatement("SELECT * FROM Bicycle b WHERE " +
                     "NOT EXISTS (SELECT * FROM Rental r WHERE r.bike_id = b.id " +
-                    "AND NOT ((? BETWEEN r.checkout_date AND r.due_date) OR (? BETWEEN r.checkout_date AND r.due_date)))");
+                    "AND ((? BETWEEN r.checkout_date AND r.due_date) OR (? BETWEEN r.checkout_date AND r.due_date)))");
             getAvailableBikes.setDate(1, Date.valueOf(checkoutDate));
             getAvailableBikes.setDate(2, Date.valueOf(dueDate));
             List<Bicycle> availableBikes = Bicycle.createListFromResultSet(getAvailableBikes.executeQuery());
@@ -185,20 +183,17 @@ public class BikeRentalCustomerClient {
             ConnectionManager.closeConnection(connection);
             ConnectionManager.closePreparedStatement(getAvailableBikes);
             ConnectionManager.closePreparedStatement(reserveBikeRental);
-            //if (scanner != null) scanner.close();
         }
     }
 
     // Shows a user their future rental reservations and allow user to cancel one if they choose
     private static void listFutureReservations(int customerId, Scanner scanner) {
-        //Scanner scanner = null;
         Connection connection = null;
         PreparedStatement getFutureReservations = null;
         PreparedStatement cancelFutureReservation = null;
 
         try {
             connection = ConnectionManager.getConnection();
-            //scanner = new Scanner(System.in);
 
             // Get a list of future rental reservations for this customer
             getFutureReservations = connection.prepareStatement("SELECT * FROM Rental r WHERE r.customer_id = ? AND r.checkout_date > ?");
@@ -243,7 +238,6 @@ public class BikeRentalCustomerClient {
             ConnectionManager.closeConnection(connection);
             ConnectionManager.closePreparedStatement(getFutureReservations);
             ConnectionManager.closePreparedStatement(cancelFutureReservation);
-            //if (scanner != null) scanner.close();
         }
     }
 }

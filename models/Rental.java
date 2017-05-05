@@ -96,27 +96,15 @@ public class Rental {
     }
 
     private static Rental createFromResultSetRow(ResultSet resultSet) throws SQLException {
-        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-        System.out.println("Columns returned:");
-        for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-            System.out.println(i + ": " + resultSetMetaData.getColumnLabel(i));
-        }
-
         int id = resultSet.getInt("id");
         int bikeId = resultSet.getInt("bike_id");
         int customerId = resultSet.getInt("customer_id");
         LocalDate checkoutDate = resultSet.getDate("checkout_date").toLocalDate(); // convert from Date to LocalDate
         LocalDate dueDate = resultSet.getDate("due_date").toLocalDate(); // convert from Date to LocalDate
-        LocalDate returnDate;
-
-        try {
-            Date returnDateSql = resultSet.getDate("return_date");
-            System.out.println("Return Date Value: " + returnDateSql);
-            returnDate = (returnDateSql == null ? null : returnDateSql.toLocalDate()); // convert from Date to LocalDate
-        } catch (SQLException e) {
-            returnDate = null;
-        }
         boolean checkedOut = resultSet.getBoolean("checked_out");
+
+        Date returnDateSql = resultSet.getDate("return_date");
+        LocalDate returnDate = (returnDateSql == null ? null : returnDateSql.toLocalDate()); // convert from Date to LocalDate
 
         return new Rental(id, bikeId, customerId, checkoutDate, dueDate, returnDate, checkedOut);
     }

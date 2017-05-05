@@ -43,6 +43,7 @@ public class BikeRentalManagerClient {
                         "  5. Record Service\n");
 
                 // Get command from user
+                System.out.print("Command number: ");
                 command = Integer.parseInt(scanner.nextLine());
 
                 if (command == EXIT) {
