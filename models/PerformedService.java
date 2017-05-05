@@ -1,5 +1,7 @@
 package models;
 
+import util.ConnectionManager;
+
 import java.sql.*;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -51,25 +53,37 @@ public class PerformedService {
     }
 
     public static PerformedService getById(Connection connection, int id) throws SQLException {
-        PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM PerformedService ps WHERE ps.id = ?");
-        preparedStatement.setInt(1, id);
-        ResultSet resultSet = preparedStatement.executeQuery();
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
 
-        if (resultSet.next()) {
-            return createFromResultSetRow(resultSet);
-        } else {
-            throw new SQLException("PerformedService with id: " + id + " not found");
+        try {
+            preparedStatement = connection.prepareStatement("SELECT * FROM PerformedService ps WHERE ps.id = ?");
+            preparedStatement.setInt(1, id);
+            resultSet = preparedStatement.executeQuery();
+
+            if (resultSet.next()) {
+                return createFromResultSetRow(resultSet);
+            } else {
+                throw new SQLException("PerformedService with id: " + id + " not found");
+            }
+        } finally {
+            ConnectionManager.closePreparedStatement(preparedStatement);
+            ConnectionManager.closeResultSet(resultSet);
         }
     }
 
     public static List<PerformedService> createListFromResultSet(ResultSet resultSet) throws SQLException {
-        List<PerformedService> performedServices = new ArrayList<>();
+        try {
+            List<PerformedService> performedServices = new ArrayList<>();
 
-        while (resultSet.next()) {
-            performedServices.add(createFromResultSetRow(resultSet));
+            while (resultSet.next()) {
+                performedServices.add(createFromResultSetRow(resultSet));
+            }
+
+            return performedServices;
+        } finally {
+            ConnectionManager.closeResultSet(resultSet);
         }
-
-        return performedServices;
     }
 
     public static PerformedService createFromResultSetRow(ResultSet resultSet) throws SQLException {

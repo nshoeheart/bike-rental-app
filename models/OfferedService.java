@@ -1,5 +1,7 @@
 package models;
 
+import util.ConnectionManager;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -40,25 +42,37 @@ public class OfferedService {
     }
 
     public static OfferedService getById(Connection connection, int id) throws SQLException {
-        PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM OfferedService os WHERE os.id = ?");
-        preparedStatement.setInt(1, id);
-        ResultSet resultSet = preparedStatement.executeQuery();
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
 
-        if (resultSet.next()) {
-            return createFromResultSetRow(resultSet);
-        } else {
-            throw new SQLException("OfferedService with id: " + id + " not found");
+        try {
+            preparedStatement = connection.prepareStatement("SELECT * FROM OfferedService os WHERE os.id = ?");
+            preparedStatement.setInt(1, id);
+            resultSet = preparedStatement.executeQuery();
+
+            if (resultSet.next()) {
+                return createFromResultSetRow(resultSet);
+            } else {
+                throw new SQLException("OfferedService with id: " + id + " not found");
+            }
+        } finally {
+            ConnectionManager.closePreparedStatement(preparedStatement);
+            ConnectionManager.closeResultSet(resultSet);
         }
     }
 
     public static List<OfferedService> createListFromResultSet(ResultSet resultSet) throws SQLException {
-        List<OfferedService> offeredServices = new ArrayList<>();
+        try {
+            List<OfferedService> offeredServices = new ArrayList<>();
 
-        while (resultSet.next()) {
-            offeredServices.add(createFromResultSetRow(resultSet));
+            while (resultSet.next()) {
+                offeredServices.add(createFromResultSetRow(resultSet));
+            }
+
+            return offeredServices;
+        } finally {
+            ConnectionManager.closeResultSet(resultSet);
         }
-
-        return offeredServices;
     }
 
     public static OfferedService createFromResultSetRow(ResultSet resultSet) throws SQLException {

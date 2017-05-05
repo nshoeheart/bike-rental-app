@@ -1,5 +1,7 @@
 package models;
 
+import util.ConnectionManager;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -46,25 +48,37 @@ public class Equipment {
     }
 
     public static Equipment getById(Connection connection, int id) throws SQLException {
-        PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Equipment e WHERE e.id = ?");
-        preparedStatement.setInt(1, id);
-        ResultSet resultSet = preparedStatement.executeQuery();
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
 
-        if (resultSet.next()) {
-            return createFromResultSetRow(resultSet);
-        } else {
-            throw new SQLException("Equipment with id: " + id + " not found");
+        try {
+            preparedStatement = connection.prepareStatement("SELECT * FROM Equipment e WHERE e.id = ?");
+            preparedStatement.setInt(1, id);
+            resultSet = preparedStatement.executeQuery();
+
+            if (resultSet.next()) {
+                return createFromResultSetRow(resultSet);
+            } else {
+                throw new SQLException("Equipment with id: " + id + " not found");
+            }
+        } finally {
+            ConnectionManager.closePreparedStatement(preparedStatement);
+            ConnectionManager.closeResultSet(resultSet);
         }
     }
 
     public static List<Equipment> createListFromResultSet(ResultSet resultSet) throws SQLException {
-        List<Equipment> equipment = new ArrayList<>();
+        try {
+            List<Equipment> equipment = new ArrayList<>();
 
-        while (resultSet.next()) {
-            equipment.add(createFromResultSetRow(resultSet));
+            while (resultSet.next()) {
+                equipment.add(createFromResultSetRow(resultSet));
+            }
+
+            return equipment;
+        } finally {
+            ConnectionManager.closeResultSet(resultSet);
         }
-
-        return equipment;
     }
 
     public static Equipment createFromResultSetRow(ResultSet resultSet) throws SQLException {

@@ -1,5 +1,7 @@
 package models;
 
+import util.ConnectionManager;
+
 import java.sql.*;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -60,25 +62,37 @@ public class Rental {
     }
 
     public static Rental getById(Connection connection, int id) throws SQLException {
-        PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Rental r WHERE r.id = ?");
-        preparedStatement.setInt(1, id);
-        ResultSet resultSet = preparedStatement.executeQuery();
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
 
-        if (resultSet.next()) {
-            return createFromResultSetRow(resultSet);
-        } else {
-            throw new SQLException("Rental with id: " + id + " not found");
+        try {
+            preparedStatement = connection.prepareStatement("SELECT * FROM Rental r WHERE r.id = ?");
+            preparedStatement.setInt(1, id);
+            resultSet = preparedStatement.executeQuery();
+
+            if (resultSet.next()) {
+                return createFromResultSetRow(resultSet);
+            } else {
+                throw new SQLException("Rental with id: " + id + " not found");
+            }
+        } finally {
+            ConnectionManager.closePreparedStatement(preparedStatement);
+            ConnectionManager.closeResultSet(resultSet);
         }
     }
 
     public static List<Rental> createListFromResultSet(ResultSet resultSet) throws SQLException {
-        List<Rental> rentals = new ArrayList<>();
+        try {
+            List<Rental> rentals = new ArrayList<>();
 
-        while (resultSet.next()) {
-            rentals.add(createFromResultSetRow(resultSet));
+            while (resultSet.next()) {
+                rentals.add(createFromResultSetRow(resultSet));
+            }
+
+            return rentals;
+        } finally {
+            ConnectionManager.closeResultSet(resultSet);
         }
-
-        return rentals;
     }
 
     public static Rental createFromResultSetRow(ResultSet resultSet) throws SQLException {
@@ -87,9 +101,14 @@ public class Rental {
         int customerId = resultSet.getInt("customer_id");
         LocalDate checkoutDate = Instant.ofEpochMilli(resultSet.getDate("checkout_date").getTime()).atZone(ZoneId.systemDefault()).toLocalDate(); // convert from Date to LocalDate
         LocalDate dueDate = Instant.ofEpochMilli(resultSet.getDate("due_date").getTime()).atZone(ZoneId.systemDefault()).toLocalDate(); // convert from Date to LocalDate
-        Date returnDateSql = resultSet.getDate("return_date");
+        LocalDate returnDate;
 
-        LocalDate returnDate = (returnDateSql == null ? null : Instant.ofEpochMilli(returnDateSql.getTime()).atZone(ZoneId.systemDefault()).toLocalDate()); // convert from Date to LocalDate
+        try {
+            Date returnDateSql = resultSet.getDate("return_date");
+            returnDate = (returnDateSql == null ? null : Instant.ofEpochMilli(returnDateSql.getTime()).atZone(ZoneId.systemDefault()).toLocalDate()); // convert from Date to LocalDate
+        } catch (SQLException e) {
+            returnDate = null;
+        }
         boolean checkedOut = resultSet.getBoolean("checked_out");
 
         return new Rental(id, bikeId, customerId, checkoutDate, dueDate, returnDate, checkedOut);

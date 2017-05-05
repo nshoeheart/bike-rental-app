@@ -1,8 +1,6 @@
 package util;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
 
 /**
  * Created by Nathan on 4/26/17.
@@ -50,6 +48,26 @@ public class ConnectionManager {
                 //System.out.println("Database connection closed successfully\n");
             } catch (SQLException e) {
                 //System.out.println("Failed to close connection\n");
+            }
+        }
+    }
+
+    public static void closePreparedStatement(PreparedStatement preparedStatement) {
+        if (preparedStatement != null) {
+            try {
+                preparedStatement.close();
+            } catch (SQLException e) {
+                // do nothing
+            }
+        }
+    }
+
+    public static void closeResultSet(ResultSet resultSet) {
+        if (resultSet != null) {
+            try {
+                resultSet.close();
+            } catch (SQLException e) {
+                //do nothing
             }
         }
     }

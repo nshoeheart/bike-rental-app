@@ -1,5 +1,7 @@
 package models;
 
+import util.ConnectionManager;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -37,25 +39,37 @@ public class BikeCondition {
     }
 
     public static BikeCondition getById(Connection connection, int id) throws SQLException {
-        PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM BikeCondition bc WHERE bc.id = ?");
-        preparedStatement.setInt(1, id);
-        ResultSet resultSet = preparedStatement.executeQuery();
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
 
-        if (resultSet.next()) {
-            return createFromResultSetRow(resultSet);
-        } else {
-            throw new SQLException("BikeCondition with id: " + id + " not found");
+        try {
+            preparedStatement = connection.prepareStatement("SELECT * FROM BikeCondition bc WHERE bc.id = ?");
+            preparedStatement.setInt(1, id);
+            resultSet = preparedStatement.executeQuery();
+
+            if (resultSet.next()) {
+                return createFromResultSetRow(resultSet);
+            } else {
+                throw new SQLException("BikeCondition with id: " + id + " not found");
+            }
+        } finally {
+            ConnectionManager.closePreparedStatement(preparedStatement);
+            ConnectionManager.closeResultSet(resultSet);
         }
     }
 
     public static List<BikeCondition> createListFromResultSet(ResultSet resultSet) throws SQLException {
-        List<BikeCondition> bikeConditions = new ArrayList<>();
+        try {
+            List<BikeCondition> bikeConditions = new ArrayList<>();
 
-        while (resultSet.next()) {
-            bikeConditions.add(createFromResultSetRow(resultSet));
+            while (resultSet.next()) {
+                bikeConditions.add(createFromResultSetRow(resultSet));
+            }
+
+            return bikeConditions;
+        } finally {
+            ConnectionManager.closeResultSet(resultSet);
         }
-
-        return bikeConditions;
     }
 
     public static BikeCondition createFromResultSetRow(ResultSet resultSet) throws SQLException {

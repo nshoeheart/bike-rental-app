@@ -1,5 +1,7 @@
 package models;
 
+import util.ConnectionManager;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -40,25 +42,37 @@ public class Customer {
     }
 
     public static Customer getById(Connection connection, int id) throws SQLException {
-        PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Customer c WHERE c.id = ?");
-        preparedStatement.setInt(1, id);
-        ResultSet resultSet = preparedStatement.executeQuery();
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
 
-        if (resultSet.next()) {
-            return createFromResultSetRow(resultSet);
-        } else {
-            throw new SQLException("Customer with id: " + id + " not found");
+        try {
+            preparedStatement = connection.prepareStatement("SELECT * FROM Customer c WHERE c.id = ?");
+            preparedStatement.setInt(1, id);
+            resultSet = preparedStatement.executeQuery();
+
+            if (resultSet.next()) {
+                return createFromResultSetRow(resultSet);
+            } else {
+                throw new SQLException("Customer with id: " + id + " not found");
+            }
+        } finally {
+            ConnectionManager.closePreparedStatement(preparedStatement);
+            ConnectionManager.closeResultSet(resultSet);
         }
     }
 
     public static List<Customer> createListFromResultSet(ResultSet resultSet) throws SQLException {
-        List<Customer> customers = new ArrayList<>();
+        try {
+            List<Customer> customers = new ArrayList<>();
 
-        while (resultSet.next()) {
-            customers.add(createFromResultSetRow(resultSet));
+            while (resultSet.next()) {
+                customers.add(createFromResultSetRow(resultSet));
+            }
+
+            return customers;
+        } finally {
+            ConnectionManager.closeResultSet(resultSet);
         }
-
-        return customers;
     }
 
     public static Customer createFromResultSetRow(ResultSet resultSet) throws SQLException {

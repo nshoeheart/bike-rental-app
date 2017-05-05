@@ -1,5 +1,7 @@
 package models;
 
+import util.ConnectionManager;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -76,14 +78,22 @@ public class Bicycle {
      * @throws SQLException if there was an error finding the Bicycle in question
      */
     public static Bicycle getById(Connection connection, int id) throws SQLException {
-        PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM Bicycle b WHERE b.id = ?");
-        preparedStatement.setInt(1, id);
-        ResultSet resultSet = preparedStatement.executeQuery();
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
 
-        if (resultSet.next()) {
-            return createFromResultSetRow(resultSet);
-        } else {
-            throw new SQLException("Bicycle with id: " + id + " not found");
+        try {
+            preparedStatement = connection.prepareStatement("SELECT * FROM Bicycle b WHERE b.id = ?");
+            preparedStatement.setInt(1, id);
+            resultSet = preparedStatement.executeQuery();
+
+            if (resultSet.next()) {
+                return createFromResultSetRow(resultSet);
+            } else {
+                throw new SQLException("Bicycle with id: " + id + " not found");
+            }
+        } finally {
+            ConnectionManager.closePreparedStatement(preparedStatement);
+            ConnectionManager.closeResultSet(resultSet);
         }
     }
 
@@ -96,13 +106,17 @@ public class Bicycle {
      * @throws SQLException if there was an error converting a row in the ResultSet to a Bicycle object
      */
     public static List<Bicycle> createListFromResultSet(ResultSet resultSet) throws SQLException {
-        List<Bicycle> bicycles = new ArrayList<>();
+        try {
+            List<Bicycle> bicycles = new ArrayList<>();
 
-        while (resultSet.next()) {
-            bicycles.add(createFromResultSetRow(resultSet));
+            while (resultSet.next()) {
+                bicycles.add(createFromResultSetRow(resultSet));
+            }
+
+            return bicycles;
+        } finally {
+            ConnectionManager.closeResultSet(resultSet);
         }
-
-        return bicycles;
     }
 
     /**
